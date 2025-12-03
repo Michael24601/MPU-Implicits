@@ -10,7 +10,8 @@ typedef float real;
 auto sqrtReal = std::sqrtf; 
 
 // Constants
-constexpr real PI = 3.141592653589;
+constexpr real PI = 3.141592653589793;
+constexpr real HALF_PI = 1.570796326794897;
 constexpr real INV_SQRT3 = 0.5773502691896257;
 constexpr real EPSILON = 1e-8;
 
@@ -53,17 +54,5 @@ constexpr real halfPower[MAX_DEPTH + 2] = {
     0.000000476837158203125f
 };
 
-
-// Cube corners
-constexpr int cubeCorners[8][3] = {
-    {-1, -1, -1},
-    {1, -1, -1},
-    {-1, 1, -1},
-    {-1, -1, 1},
-    {1, 1, -1},
-    {1, -1, 1},
-    {-1, 1, 1},
-    {1, 1, 1}
-};
 
 #endif

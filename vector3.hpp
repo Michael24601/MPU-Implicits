@@ -12,6 +12,9 @@ private:
     
 public:
 
+    static Vector3 ORIGIN;    
+
+
     Vector3(){
         data[0] = data[1] = data[2] = 0.0;
     }
@@ -21,6 +24,11 @@ public:
         data[0] = x;
         data[1] = y;
         data[2] = z;
+    }
+
+
+    Vector3(real x){
+        data[0] = data[1] = data[2] = x;
     }
 
 

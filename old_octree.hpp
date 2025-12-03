@@ -65,11 +65,12 @@ public:
             return;
         }
         
-        //
+        // Esnures there are enough points in the sphere
         while(points.size() < N_MIN){
             radius += LAMBDA;
             tree.rangeQuery(center, radius, points);
         }
+        
         
         
     }

@@ -15,11 +15,21 @@ public:
 
     Point(real x, real y, real z, real nx, real ny, real nz)
         : point(x, y, z), normal(nx, ny, nz){
-            real normalLength = normal.length();
-            if(normalLength > 1.0 && abs(normalLength) >= EPSILON){
-                normal = normal * (1.0 / normalLength);
-            }
+        real normalLength = normal.length();
+        if(normalLength > 1.0 && abs(normalLength) >= EPSILON){
+            normal = normal * (1.0 / normalLength);
         }
+    }
+
+
+    const Vector3& getPoint() const{
+        return point;
+    }
+
+
+    const Vector3& getNormal() const{
+        return normal;
+    }
 
 };
 

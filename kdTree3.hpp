@@ -3,9 +3,10 @@
 #define KD_TREE_H
 
 #include "vector3.hpp"
+#include "point.hpp"
 #include <vector>
 
-// A 3D kd-tree implementation
+// A 3D kd-tree implementation, used to store 3D points
 class KdTree3{
 private:
 
@@ -14,12 +15,11 @@ private:
 
         Node* left;
         Node* right;
-        Vector3 point;
-        int pointIndex;
+        Point point;
 
 
-        Node(const Vector3& point, int pointIndex) : point{point}, 
-            pointIndex{pointIndex}, left{nullptr}, right{nullptr}{}
+        Node(const Point& point) : point{point}, 
+            left{nullptr}, right{nullptr}{}
 
     };
 
@@ -35,16 +35,16 @@ private:
     }
 
     void rangeQueryAux(const Vector3& center, real radius, 
-        std::vector<int>& points, NodePtr ptr, int axis) const {
+        std::vector<Point>& points, NodePtr ptr, int axis) const {
 
         if(!ptr){
             return;
         }
 
-        Vector3 difference = center - ptr->point;
+        Vector3 difference = center - ptr->point.getPoint();
 
         if(difference.lengthSquared() <= radius * radius){
-            points.push_back(ptr->pointIndex);
+            points.push_back(ptr->point);
         }
 
         // If the point is within the range with respect to this
@@ -68,10 +68,10 @@ public:
     }
 
 
-    void insert(const Vector3& point, int pointIndex){
+    void insert(const Point& point){
 
         if(!root){
-            root = new Node(point, pointIndex);
+            root = new Node(point);
             return;
         }
 
@@ -86,7 +86,7 @@ public:
                     ptr = ptr->left;
                 }
                 else{
-                    ptr->left = new Node(point, pointIndex);
+                    ptr->left = new Node(point);
                     return;
                 }
             }
@@ -95,7 +95,7 @@ public:
                     ptr = ptr->right;
                 }
                 else{
-                    ptr->right = new Node(point, pointIndex);
+                    ptr->right = new Node(point);
                     return;
                 }
             }
@@ -106,7 +106,7 @@ public:
     
     // Returns all points within a certain range (returns only the indexes)
     void rangeQuery(const Vector3& center, real radius, 
-        std::vector<int>& points) const {
+        std::vector<Point>& points) const {
 
         rangeQueryAux(center, radius, points, root, 0);
     }

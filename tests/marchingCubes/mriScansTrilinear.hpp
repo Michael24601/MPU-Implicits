@@ -3,7 +3,7 @@
 #define MRI_SCANS_TRILINEAR_H
 
 #include <algorithm>
-#include "mriScansClosest.hpp"
+#include "mriScansNearest.hpp"
 
 
 // The density function, which takes p as input, where p 

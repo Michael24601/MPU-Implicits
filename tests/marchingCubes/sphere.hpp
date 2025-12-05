@@ -15,8 +15,8 @@ void sphereTest(){
 
     real (*f)(const Vector3&) = sphereSignedDistance;
     // Uses 20 cubes per direction
-    auto cubes = marchingCubes(f, Vector3(1.0), 0, 30, 30, 30, false);
-    writeToFile(cubes, "output/sphere_test.obj");
+    marchingCubes(f, Vector3(1.0), 0, 30, 30, 30, false,
+        "output/sphere_test.obj");
 }
 
 #endif

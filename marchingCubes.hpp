@@ -38,6 +38,11 @@ struct Cube {
 };
 
 
+// Forward declaration
+void writeToFile(const Cube&, std::ofstream&, std::ofstream&, 
+    std::ofstream&, int);
+
+
 // Instead of expecting data, it just expects us to send it a function
 // object that satisfies some basic assumptions, a surface value b
 // such that f(x, y, z) = b defines our surface, the range
@@ -45,12 +50,13 @@ struct Cube {
 // (here nx, ny, and nz is the number of cubes + 1), and whether to
 // use the middle point or interpolate to get the triangle vertices
 // along the edges.
-std::vector<std::vector<std::vector<Cube>>> marchingCubes(
+void marchingCubes(
     const std::function<real(const Vector3&)>& function,
     const Vector3& range, 
     real surfaceValue, 
     int nx, int ny, int nz,
-    bool useMiddlePoints
+    bool useMiddlePoints,
+    std::string filename
 ) {
 
 
@@ -159,19 +165,34 @@ std::vector<std::vector<std::vector<Cube>>> marchingCubes(
 
     // For a less accurate mesh, we can use less cubes.
 
-    // Array of cubes
-    std::vector<std::vector<std::vector<Cube>>> cubes(CX, 
-    std::vector<std::vector<Cube>>(CY, 
-        std::vector<Cube>(CZ, Cube{})));
+    // In order not to exceed memory limits, it is better not to
+    // save an array of cubes.
+    // Instead, we will compute each cube one by one, and immediately
+    // write it to a file. Because the vertex, normal, and triangle
+    // data needs to be continuous, we write to 3 seperate files
+    // and then combine.
+
+    // This approach uses much, much less memory, and, after some testing
+    // proved to also be much faster.
+
+    std::ofstream vertexOut("output/v_temp.obj");
+    std::ofstream normalOut("output/n_temp.obj");
+    std::ofstream triangleOut("output/t_temp.obj");
+
+    // Keeps track of how many triangle vertices have been written
+    // to the file, indexing is 1-based.
+    int vertexCount = 1;
 
     for (int x = 0; x < CX; x++) {
         for (int y = 0; y < CY; y++) {
             for(int z = 0; z < CZ; z++){
 
+                Cube cube;
+
                 // Here we populate the corners array, by checking
                 // if the corners are inside or outside the surface.
                 for(int cor = 0; cor < 8; cor++){
-                    cubes[x][y][z].corners[cor] = 
+                    cube.corners[cor] = 
                         density[x + cubeCornerOffset[cor][0]]
                         [y + cubeCornerOffset[cor][1]]
                         [z + cubeCornerOffset[cor][2]] > SURFACE_VALUE;
@@ -186,7 +207,7 @@ std::vector<std::vector<std::vector<Cube>>> marchingCubes(
                 // and use that as our array index.
                 uint8_t configuration = 0;
                 for (int i = 0; i < 8; i++){
-                    configuration |= ((cubes[x][y][z].corners[i] ? 1 : 0) << i);
+                    configuration |= ((cube.corners[i] ? 1 : 0) << i);
                 }
                 
                 int edges = EDGE_TABLE[configuration];
@@ -194,7 +215,7 @@ std::vector<std::vector<std::vector<Cube>>> marchingCubes(
                     // The table itself stores the 12 booleans inside
                     // a 12 byte integer, so we use that to get the
                     // status of each edge.
-                    cubes[x][y][z].edges[i] = (edges >> i) & 1;
+                    cube.edges[i] = (edges >> i) & 1;
                 }
 
                 // Next we have to calculate the edge intersection positions
@@ -202,7 +223,7 @@ std::vector<std::vector<std::vector<Cube>>> marchingCubes(
                 for(int i = 0; i < 12; i++){
 
                     // if the edge has an intersection at all
-                    if(!cubes[x][y][z].edges[i]){
+                    if(!cube.edges[i]){
                         continue;
                     }
 
@@ -239,7 +260,7 @@ std::vector<std::vector<std::vector<Cube>>> marchingCubes(
 
                     // The vertex along the edge, using the alpha
                     // we computed.
-                    cubes[x][y][z].vertexCoordinate[i] = p0 * alpha 
+                    cube.vertexCoordinate[i] = p0 * alpha 
                         + p1 * (1.0 - alpha);
                     
                     // Likewise, to calculate normal, we just use the
@@ -248,7 +269,7 @@ std::vector<std::vector<std::vector<Cube>>> marchingCubes(
                         gradient[x1][y1][z1] * (1.0 - alpha);
                     normal.normalize();
 
-                    cubes[x][y][z].vertexNormal[i] = normal;
+                    cube.vertexNormal[i] = normal;
                     
                 }
 
@@ -258,7 +279,7 @@ std::vector<std::vector<std::vector<Cube>>> marchingCubes(
                 // that are inside and outside as input, and returns
                 // the indexes of the points in triplets such that these
                 // form triangles.
-                cubes[x][y][z].triangles.reserve(5);
+                cube.triangles.reserve(5);
 
                 // There are at most 5 triangles, so 15 total indexes
                 // to loop through.
@@ -270,101 +291,90 @@ std::vector<std::vector<std::vector<Cube>>> marchingCubes(
                         break;
                     }
                     
-                    cubes[x][y][z].triangles.push_back(std::vector<int>{
+                    cube.triangles.push_back(std::vector<int>{
                         TRI_TABLE[configuration][i], 
                         TRI_TABLE[configuration][i+1],
                         TRI_TABLE[configuration][i+2]
                     });
                 }
+
+                // Then we just write it to the file
+                writeToFile(cube, vertexOut, normalOut, triangleOut, 
+                    vertexCount);
+                vertexCount += cube.triangles.size() * 3;
             }
         }
     }
 
-    return cubes;
+    vertexOut.close();
+    normalOut.close();
+    triangleOut.close();
+
+    // Then we combine them
+    std::ofstream out(filename, std::ios::binary);
+    // We scope the instreams to allow us to delete the files later
+    {
+        std::ifstream vIn("output/v_temp.obj", std::ios::binary);
+        out << vIn.rdbuf();
+        std::ifstream nIn("output/n_temp.obj", std::ios::binary);
+        out << nIn.rdbuf();
+        std::ifstream tIn("output/t_temp.obj", std::ios::binary);
+        out << tIn.rdbuf();
+    }
+
+    out.close();
+
+    std::remove("output/v_temp.obj");
+    std::remove("output/n_temp.obj");
+    std::remove("output/t_temp.obj");
 }
 
 
 // This function just takes the array of cubes containing some triangles
 // and converts them to a .obj file.
-
-
-void writeToFile(
-    std::vector<std::vector<std::vector<Cube>>> cubes,
-    std::string filename
-){
-
-    std::ofstream out(filename);
-
-    if(cubes.empty() || cubes[0].empty()){
-        throw std::invalid_argument("The cubes array is empty");
-    }
-    
-    // Number of cubes.
-    int CX = cubes.size();
-    int CY = cubes[0].size();
-    int CZ = cubes[0][0].size();
+// We keep track of how many triangle vertices we have written.
+void writeToFile(const Cube& cube, std::ofstream& vertexOut,
+    std::ofstream& normalOut, std::ofstream& triangleOut, int vertexCount){
 
     // Vertices
-    for (int x = 0; x < CX; x++) {
-        for (int y = 0; y < CY; y++) {
-            for(int z = 0; z < CZ; z++){
-
-                for(int tri = 0; tri < cubes[x][y][z].triangles.size(); tri++){
-                    // For each triangle vertex, we save the coordinates
-                    for(int i = 0; i < 3; i++){
-                        out << "v "
-                            << cubes[x][y][z].vertexCoordinate
-                                [cubes[x][y][z].triangles[tri][i]][0] << " "
-                            << cubes[x][y][z].vertexCoordinate
-                                [cubes[x][y][z].triangles[tri][i]][1] << " "
-                            << cubes[x][y][z].vertexCoordinate
-                                [cubes[x][y][z].triangles[tri][i]][2] << "\n";
-                    }
-                }
-            }
+    for(int tri = 0; tri < cube.triangles.size(); tri++){
+        // For each triangle vertex, we save the coordinates
+        for(int i = 0; i < 3; i++){
+            vertexOut << "v "
+                << cube.vertexCoordinate[cube.triangles[tri][i]][0] << " "
+                << cube.vertexCoordinate[cube.triangles[tri][i]][1] << " "
+                << cube.vertexCoordinate[cube.triangles[tri][i]][2] << "\n";
         }
     }
 
 
     // Normals
-    for (int x = 0; x < CX; x++) {
-        for (int y = 0; y < CY; y++) {
-            for(int z = 0; z < CZ; z++){
 
-                for(int tri = 0; tri < cubes[x][y][z].triangles.size(); tri++){
-                    // For each triangle vertex, we save the normals
-                    for(int i = 0; i < 3; i++){
-                        out << "vn "
-                            << cubes[x][y][z].vertexNormal
-                                [cubes[x][y][z].triangles[tri][i]][0] << " "
-                            << cubes[x][y][z].vertexNormal
-                                [cubes[x][y][z].triangles[tri][i]][1] << " "
-                            << cubes[x][y][z].vertexNormal
-                                [cubes[x][y][z].triangles[tri][i]][2] << "\n";
-                    }
-                }
-            }
+    for(int tri = 0; tri < cube.triangles.size(); tri++){
+        // For each triangle vertex, we save the normals
+        for(int i = 0; i < 3; i++){
+            normalOut << "vn "
+                << cube.vertexNormal
+                    [cube.triangles[tri][i]][0] << " "
+                << cube.vertexNormal
+                    [cube.triangles[tri][i]][1] << " "
+                << cube.vertexNormal
+                    [cube.triangles[tri][i]][2] << "\n";
         }
     }
     
-    // In a .obj, the indexes are 1-based
-    int v_count = 1;
+    // We just take the current vertex count and list triangle vertices
+    // starting from it.
+    int tempCount = vertexCount;
 
-    for (int x = 0; x < CX; x++) {
-        for (int y = 0; y < CY; y++) {
-            for(int z = 0; z < CZ; z++){
-                for(int tri = 0; tri < cubes[x][y][z].triangles.size(); tri++){
-                    // Now we save the triangle faces
-                    out << "f " << v_count << "//" << v_count << " " 
-                                << v_count+1  << "//" << v_count + 1 << " " 
-                                << v_count+2  << "//" << v_count + 2 << "\n";
-                    v_count += 3;
-                }
-            }
-        }
+    for(int tri = 0; tri < cube.triangles.size(); tri++){
+        // Now we save the triangle faces
+        triangleOut << "f " << tempCount << "//" << tempCount << " " 
+                    << tempCount + 1  << "//" << tempCount + 1 << " " 
+                    << tempCount + 2  << "//" << tempCount + 2 << "\n";
+
+        tempCount += 3;
     }
-
-    out.close();
 }
 
 

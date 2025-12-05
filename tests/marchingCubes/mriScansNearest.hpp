@@ -96,9 +96,8 @@ void mriScanNearestTest(){
     // The issue with nearest neighbor interpolation is that
     // we are limited by the image dimensions and number of slices;
     // using more cubes than that won't get us a smoother result.
-    auto cubes = marchingCubes(f, Vector3(256.0, 256.0, 109.0), 
-        1500, 256, 256, 109, false);
-    writeToFile(cubes, "output/mri_nearest_test.obj");
+    marchingCubes(f, Vector3(256.0, 256.0, 109.0), 1500, 256, 256, 
+        109, false, "output/mri_nearest_test.obj");
 }
 
 #endif

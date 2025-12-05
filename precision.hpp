@@ -4,10 +4,9 @@
 
 #include <cmath>
 
-
 // Precision
 typedef float real;
-auto sqrtReal = std::sqrtf; 
+float (*sqrtReal)(float) = ::sqrtf;
 
 // Constants
 constexpr real PI = 3.141592653589793;
@@ -24,9 +23,8 @@ constexpr real ALPHA = 0.75;
 // The step size when incrementing the radius
 constexpr real LAMBDA = 0.1;
 
-// The maximum depth the tree can go to
+// The maximum depth the octree can go
 constexpr int MAX_DEPTH = 20;
-
 
 // Stored here for faster lookup (1/2^n)
 constexpr real halfPower[MAX_DEPTH + 2] = {
@@ -53,6 +51,5 @@ constexpr real halfPower[MAX_DEPTH + 2] = {
     0.00000095367431640625f,
     0.000000476837158203125f
 };
-
 
 #endif

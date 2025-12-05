@@ -81,7 +81,7 @@ public:
         // It's like a binary tree but at each node we alternate 
         // which axis we compare.
         while(ptr){
-            if(ptr->point[axis] > point[axis]){
+            if(ptr->point.getPoint()[axis] > point.getPoint()[axis]){
                 if(ptr->left){
                     ptr = ptr->left;
                 }

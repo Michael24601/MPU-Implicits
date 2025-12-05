@@ -9,20 +9,9 @@
 #include "precision.hpp"
 #include "vector3.hpp"
 #include "localFitFunction.hpp"
+#include "generalQuadric.hpp"
 #include "kdTree3.hpp"
-
-
-// Cube corners
-const Vector3 cubeCorners[8] = {
-    Vector3(-1, -1, -1),
-    Vector3(1, -1, -1),
-    Vector3(-1, 1, -1),
-    Vector3(-1, -1, 1),
-    Vector3(1, 1, -1),
-    Vector3(1, -1, 1),
-    Vector3(-1, 1, 1),
-    Vector3(1, 1, 1)
-};
+#include "cubeOffset.hpp"
 
 
 class Octree{
@@ -113,13 +102,13 @@ private:
                 // so the offset diagonal is at the quarter, that is is,
                 // halfPower[depth+2], which we know exists since we
                 // haven't reached the max depth.
-                // We multiply iy by 1/sqrt3 to get the offset in x,
+                // We multiply it by 1/sqrt3 to get the offset in x,
                 // y and z.
                 real offset = halfPower[depth+2] * INV_SQRT3;
 
                 for(int i = 0; i < 8; i++){
                     child[i] = new Node(depth+1, 
-                        centroid + (cubeCorners[i] * offset));
+                        centroid + (cubeCenterOffset[i] * offset));
                 }
             }
         }
@@ -161,7 +150,7 @@ private:
                 real offset = halfPower[depth+1] * INV_SQRT3;
 
                 for(int i = 0; i < 8; i++){
-                    corners[i] = centroid + (cubeCorners[i] * offset);
+                    corners[i] = centroid + (cubeCenterOffset[i] * offset);
                 }
 
                 quadric->fit(points, corners);

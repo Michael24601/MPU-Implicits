@@ -14,7 +14,7 @@
 // to store the edge intersection status.
 // Note that although we have 256 configurations, exploiting cube symmetries
 // reduces them to 15 unique cases.
-int edge_table[256]{
+int EDGE_TABLE[256]{
     0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
     0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
     0x190, 0x99 , 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
@@ -54,7 +54,7 @@ int edge_table[256]{
 // between the edges and the surface form triangles.
 // We can have up to five triangles; the indexes of each triangle
 // are stored sequentially in each row of the table below.
-int tri_table[256][16]{
+int TRI_TABLE[256][16]{
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},

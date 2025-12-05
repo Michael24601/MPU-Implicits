@@ -47,13 +47,18 @@ public:
     }
 
 
-    real getElement(int index) const{
-        if(index >= 0 && index < 3){
-            return data[index];
-        }
-        else{
-            throw std::invalid_argument("Index is out of bounds\n");
-        }
+    void setX(real x){
+        data[0] = x;
+    }
+
+
+    void setY(real y){
+        data[1] = y;
+    }
+
+
+    void setZ(real z){
+        data[2] = z;
     }
 
 
@@ -96,6 +101,17 @@ public:
         return data[0] * v.data[0]
             + data[1] * v.data[1]
             + data[2] * v.data[2];
+    }
+
+
+    // cross product
+    Vector3 operator%(const Vector3& v) const{
+        Vector3 result(
+            data[1] * v.data[2] - data[2] * v.data[1],
+            data[2] * v.data[0] - data[0] * v.data[2],
+            data[0] * v.data[1] - data[1] * v.data[0] 
+        );
+        return result;
     }
 
 

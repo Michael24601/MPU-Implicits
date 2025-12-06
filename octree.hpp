@@ -27,7 +27,9 @@ private:
         // Centroid and radius of the cube associated with the node
         Vector3 centroid;
         real radius;
-        // The local fit function
+        // The local fit function, should only be fitted
+        // on a leaf node. If a node is subdivided we should delete
+        // the local fit function.
         LocalFitFunction* localFitFunction;
         
         // The 8 children
@@ -37,7 +39,7 @@ private:
     public:
 
         Node(int depth, const Vector3& centroid) : 
-            depth{depth}, centroid{centroid}, leaf{false},
+            depth{depth}, centroid{centroid}, leaf{true},
             child{nullptr, nullptr, nullptr, nullptr, nullptr, 
                 nullptr, nullptr, nullptr}{
 
@@ -47,7 +49,14 @@ private:
 
         
         ~Node(){
-            delete localFitFunction;
+            deallocateLocalFunction();
+        }
+
+
+        void deallocateLocalFunction(){
+            if(localFitFunction){
+                delete localFitFunction;
+            }
         }
 
         
@@ -63,6 +72,14 @@ private:
 
         real getRadius() const{
             return radius;
+        }
+
+
+        Node* getChild(int index){
+            if(index < 0 || index >= 8){
+                throw std::invalid_argument("Child index does not exist\n");
+            }
+            return child[index];
         }
 
 
@@ -97,7 +114,9 @@ private:
             }
 
             if(leaf){
+                // Ceases to be a leaf
                 leaf = false;
+
                 // The diagonal for this cube is halfPower[depth],
                 // so the offset diagonal is at the quarter, that is is,
                 // halfPower[depth+2], which we know exists since we
@@ -118,6 +137,11 @@ private:
         // this function fits a local function to the points.
         // Note that this function assumes that points is not empty.
         void fitLocalFunction(const std::vector<Point>& points){
+
+            // Only fitted on leafs
+            if(!leaf){
+                return;
+            }
 
             // It first calculates the maximum angle theta between
             // the normals of the points and the normalized arithmetic
@@ -166,6 +190,40 @@ private:
 
         }
 
+        // Evaluates the local function at the given point
+        real evaluateLocalFitFunction(const Vector3& p) const{
+            // In general only leafs should have local functions fitted,
+            // so we need to ensure we only call this on leafs.
+            if(localFitFunction){
+                return localFitFunction->evaluate(p);
+            }
+            else{
+                throw std::exception("Local function undefined on node\n");
+            }
+        }
+
+
+        real evaluateErrorApproximation(
+            const std::vector<Point>& points) const{
+
+            // In general only leafs should have local functions fitted,
+            // so we need to ensure we only call this on leafs.
+            if(localFitFunction){
+                return localFitFunction->approximationError(points);
+            }
+            else{
+                throw std::exception("Local function undefined on node\n");
+            }
+        }
+
+
+        // Evaluates the b-spline of the local function at the
+        // given point
+        real evaluateQuadraticBSpline(const Vector3& p) const {
+            // TODO: finish this.
+            return 1.0;
+        }
+
     };
 
 
@@ -178,32 +236,78 @@ private:
     // it either subdivides further or stops subdividing.
     void subdivideSpaceAux(NodePtr ptr, const KdTree3& tree){
 
-        real diagonal = halfPower[ptr->getDepth()];
+        // As soon as a node is created, its radius is set to
+        // ALPHA * diagonal (which is fixed given the depth), 
+        // and the centroid is given in the constructor, and is
+        // also fixed based on the paren't centroid and diagonal.
+        // We can assume ptr has been initialized, if not,
+        // we return.
+        if(!ptr) return;
 
-        // We can assume that if we are at depth > 1,
-        // that the parent of this node contained at least N_MIN points,
-        // otherwise we would not have recursed.
-        // So it is sufficient to search the paren't nodes for points 
-        // contained inside this node.
+        // We assume a pointer that made it to this point is a leaf.
+        // If not, then 
+
+        // We check how many points are in the sphere by default
         std::vector<Point> points;
         tree.rangeQuery(ptr->getCentroid(), ptr->getRadius(), points);
 
-        // The empty ball case, no further subdivision
+        // In the empty ball case, no further subdivision i done,
+        // we fit the local function and move on.
         if(points.size() == 0){
-            
-            
+            ptr->fitLocalFunction(points);
             return;
         }
         
-        // Esnures there are enough points in the sphere
+        // If we have some points in the sphere, we ensure we have
+        // enough points, by incrementing the radius.
         while(points.size() < N_MIN){
             points.clear();
             ptr->incrementRadius();
             tree.rangeQuery(ptr->getCentroid(), ptr->getRadius(), points);
         }
         
+        // Once we have enough points, we fit a local function.
+        ptr->fitLocalFunction(points);
         
+        // If this error metric is too large, we have to disregard
+        // the local fit function and subdivide.
+        if(ptr->evaluateErrorApproximation(points) > EPSILON_ZERO){
+            ptr->deallocateLocalFunction();
+            ptr->subdivide();
+            for(int i = 0; i < 8; i++){
+                subdivideSpaceAux(ptr->getChild(i), tree);
+            }
+        }        
+
+        // Otherwise we keep the function and the node remains a leaf
+    }
+
+
+    void evaluateAux(const Vector3& p, NodePtr ptr, float& sum, 
+        float& factor){
         
+        if(!ptr){
+            return;
+        }
+        
+        if((p - ptr->getCentroid()).lengthSquared() <= 
+            ptr->getRadius() * ptr->getRadius()){
+
+            // If it is a leaf, we evaluate it
+            if(ptr->isLeaf()){
+
+                real spline = ptr->evaluateQuadraticBSpline(p);
+                sum += ptr->evaluateLocalFitFunction(p) * spline;
+                factor *= spline;
+            }
+            // Otherwise we check its children
+            else{
+                // Then we visit the children
+                for(int i = 0; i < 8; i++){
+                    evaluateAux(p, ptr->getChild(i), sum, factor);
+                }
+            }
+        }
     }
 
 
@@ -215,6 +319,31 @@ public:
     }
 
 
+    // Subdivides the space given points arranged in a kd-tree.
+    // This assumes the points are in a cube centered at the origin
+    // with a diagonal of size 1.
+    void subdivideOctree(const KdTree3& tree){
+        // We can't do this iteratively since we may need
+        // to subdivide the nodes.
+        subdivideSpaceAux(root, tree);
+    }
+
+
+    real evaluate(const Vector3& p){
+        // Sum and normalization factor
+        float sum = 0.0;
+        float factor = 1.0;
+        // We will go through the tree, exploring branches only
+        // if the sphere contains the given point.
+        // When we get to a leaf, and it contains the point,
+        // we evaluate the weight and the local function associated
+        // with it, and add it to the sum.
+        // We also keep track of the sum of weight functions (those
+        // that are non-zero) so we can normalize the result.
+        evaluateAux(p, root, sum, factor);
+        sum /= factor;
+        return sum;
+    }
 
 };
 

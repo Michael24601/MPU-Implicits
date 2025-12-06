@@ -43,6 +43,12 @@ public:
         return result;
     }
 
+
+    Vector3 evaluateGradient(const Vector3& input) const override{
+        Vector3 result;
+        return result;
+    }
+
 };
 
 

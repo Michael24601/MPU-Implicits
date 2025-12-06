@@ -26,6 +26,9 @@ constexpr real LAMBDA = 0.1;
 // The maximum depth the octree can go
 constexpr int MAX_DEPTH = 20;
 
+// The maximum accepted approximation error
+constexpr real EPSILON_ZERO = 0.5;
+
 // Stored here for faster lookup (1/2^n)
 constexpr real halfPower[MAX_DEPTH + 2] = {
     1.0f,

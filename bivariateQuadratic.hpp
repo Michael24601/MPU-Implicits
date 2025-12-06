@@ -56,6 +56,11 @@ private:
     }
 
 
+    // Transforms a point from uvw back to xyz
+    Vector3 iverse(const Vector3& point) const {
+    }
+
+
 public:
 
 
@@ -71,7 +76,7 @@ public:
     }
 
 
-    // The quadratic has a formula w - (Au^2 + 2Buv + Cv^2 + Du + Ev + F).
+    // The quadratic has a formula w - (Au^2 + 2Buv + Cv^2 + Du + Ev + F).a
     // Note however that the input is is given in the original (x, y, z)
     // coordinate system.
     real evaluate(const Vector3& input) const override{
@@ -83,6 +88,12 @@ public:
             coefficients[3] * u +
             coefficients[4] * v +
             coefficients[5]);
+        return result;
+    }
+
+    
+    Vector3 evaluateGradient(const Vector3& input) const override{
+        Vector3 result;
         return result;
     }
 

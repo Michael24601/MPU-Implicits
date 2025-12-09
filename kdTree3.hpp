@@ -67,7 +67,7 @@ private:
     // Finds median point in given range (both sides inclusive), 
     // inserts it into the tree, and then recurses on either side of it.
     // The axis alternates per step.
-    NodePtr insertBulkAux(std::vector<Point>& points, int start, int end, 
+    NodePtr bulkInsertAux(std::vector<Point>& points, int start, int end, 
         int axis){
 
         // The node at which this function was called must be
@@ -95,8 +95,8 @@ private:
         // We then insert the middle element into the tree as a new node.
         NodePtr node = new Node(points[middle]);
         // We then recurse
-        node->left = insertBulkAux(points, start, middle-1, (axis+1) % 3);
-        node->right = insertBulkAux(points, middle+1, end, (axis+1) % 3);
+        node->left = bulkInsertAux(points, start, middle-1, (axis+1) % 3);
+        node->right = bulkInsertAux(points, middle+1, end, (axis+1) % 3);
         
         return node;
     }
@@ -165,12 +165,12 @@ public:
     // Note that this assumes the tree is emtpy.
     // Also note that the points vector will be modified (some of its
     // elements will be sorted).
-    void insertBulk(std::vector<Point>& points){
+    void bulkInsert(std::vector<Point>& points){
         if(root){
             return;
         }
         else{
-            root = insertBulkAux(points, 0, points.size()-1, 0);
+            root = bulkInsertAux(points, 0, points.size()-1, 0);
         }
     }
 

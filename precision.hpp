@@ -6,12 +6,14 @@
 
 // Precision
 typedef float real;
-float (*sqrtReal)(float) = ::sqrtf;
+inline float (*sqrtReal)(float) = ::sqrtf;
 
 // Constants
 constexpr real PI = 3.141592653589793;
 constexpr real HALF_PI = 1.570796326794897;
 constexpr real INV_SQRT3 = 0.5773502691896257;
+
+// Epsilon used to check if floating point numbers are 0
 constexpr real EPSILON = 1e-8;
 
 // The minimum number of points in a leaf node
@@ -28,6 +30,10 @@ constexpr int MAX_DEPTH = 20;
 
 // The maximum accepted approximation error
 constexpr real EPSILON_ZERO = 0.5;
+
+// The conjugate gradient parameters
+constexpr real MAX_CG_ERROR = 1e-06;
+constexpr real MAX_CG_ITERATIONS = 50;
 
 // Stored here for faster lookup (1/2^n)
 constexpr real halfPower[MAX_DEPTH + 2] = {

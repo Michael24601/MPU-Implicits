@@ -9,7 +9,7 @@
 class GeneralQuadric: public LocalFitFunction{
 private:
 
-    // Elements of the matrix A (lowe right triangle)
+    // Elements of the matrix A (lower left triangle)
     real matrix[6];
 
     // The b vector
@@ -21,12 +21,12 @@ private:
 public:
 
 
-    GeneralQuadric(){}
+    GeneralQuadric() : matrix{0,0,0,0,0,0}, vec(0,0,0), scalar(0) {}
 
 
     // Fits the quadric given a set of points
     void fit(const std::vector<Point>& point, Vector3* corners){
-        
+        // TODO:
     }
 
 
@@ -44,8 +44,16 @@ public:
     }
 
 
+    // Since the matrix A is symmetric, the gradient is 2Ax + b
     Vector3 evaluateGradient(const Vector3& input) const override{
-        Vector3 result;
+        Vector3 result(
+            2 * (matrix[0] * input.x() + matrix[1] * input.y() 
+                + matrix[3] * input.z()) + vec.x(),
+            2 * (matrix[1] * input.x() + matrix[2] * input.y() 
+                + matrix[4] * input.z()) + vec.y(),
+            2 * (matrix[3] * input.x() + matrix[4] * input.y() 
+                + matrix[5] * input.z()) + vec.z()
+        );
         return result;
     }
 

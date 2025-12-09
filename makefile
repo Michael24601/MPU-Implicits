@@ -1,6 +1,6 @@
 
 all:
-	g++ main.cpp -o build/app
+	g++ *.cpp -o build/app
 
 run: all
 	./build/app

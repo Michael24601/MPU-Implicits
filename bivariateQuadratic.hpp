@@ -20,15 +20,18 @@ private:
     
     Vector3 normal;
     Vector3 origin;
+    // basis
+    Vector3 uBasis;
+    Vector3 vBasis;
 
 
-    // Transform a point from xyz to uvw.
-    Vector3 transform(const Vector3& point) const {
+    // We call this before we fit the function, and it sets the basis
+    // including the orthonormal 2D basis u, v, the normal, which is
+    // also our 3rd basis vector w, and the origin.
+    void setBasis(const Vector3& origin, const Vector3& normal){
 
-        // This ensures the resulting point is centered at the
-        // given origin.
-        Vector3 xyz = point - origin;
-        Vector3 uvw;
+        this->origin = origin;
+        this->normal = normal;
 
         // First we generate u, an arbitrary vector on the plane
         // orthogonal to the normal.
@@ -38,15 +41,24 @@ private:
         if(abs(r * normal - 1.0) < EPSILON){
             r = Vector3(1, 0, 0);
         }
-        Vector3 u = (normal % r).normalized();
+        this->uBasis = (normal % r).normalized();
         
         // We then generate v such that it is perpendicular to u
         // and the normal.
-        Vector3 v = (normal % u).normalized();
+        this->vBasis = (normal % uBasis).normalized();
+    }
+
+
+    // Transform a point from xyz to uvw.
+    Vector3 transform(const Vector3& point) const {
+
+        // This ensures the point is at the new origin
+        Vector3 xyz = point - origin;
+        Vector3 uvw;
 
         // We then project the point xyz, onto to the plane.
-        uvw.setX(u * xyz);
-        uvw.setY(v * xyz);
+        uvw.setX(uBasis * xyz);
+        uvw.setY(vBasis * xyz);
 
         // We then calculate the distance of xyz along the normal,
         // which is by definition the dot product.
@@ -56,23 +68,20 @@ private:
     }
 
 
-    // Transforms a point from uvw back to xyz
-    Vector3 iverse(const Vector3& point) const {
-    }
-
-
 public:
 
 
-    BivariateQuadratic(){}
+    BivariateQuadratic(const Vector3& origin, const Vector3& normal): 
+        coefficients{0,0,0,0,0,0}{
+
+        setBasis(origin, normal);
+    }
 
 
     // Fits the quadric given a set of points (also initializes
     // the normal and center)
-    void fit(const std::vector<Point>& point, const Vector3& normal,
-        const Vector3& center){
-        
-        
+    void fit(const std::vector<Point>& point){
+        // TODO:
     }
 
 
@@ -83,18 +92,37 @@ public:
         Vector3 uvw = transform(input);
         real u{uvw.x()}, v{uvw.y()}, w{uvw.z()};
         real result = w - (coefficients[0] * u * u +
-            coefficients[1] * u * v * 2 +
-            coefficients[2] * v * v +
-            coefficients[3] * u +
-            coefficients[4] * v +
-            coefficients[5]);
+            coefficients[1] * u * v * 2 + coefficients[2] * v * v +
+            coefficients[3] * u + coefficients[4] * v + coefficients[5]);
         return result;
     }
 
     
     Vector3 evaluateGradient(const Vector3& input) const override{
-        Vector3 result;
-        return result;
+
+        // To evaluate the gradient at a point xyz, we first
+        // convert it to uvw, get the gradient nabla uvw, and
+        // then multiply each element by the basis vectorx u, v, and w 
+        // to get the gradient of xyz (because the gradient is a normal,
+        // that is, it is covariant, so transforming the gradient
+        // from uvw to xyz uses the same matrix as transforming
+        // a contravariant vector from xyz to uvw, that is).
+        Vector3 uvw = transform(input);
+        real u{uvw.x()}, v{uvw.y()}, w{uvw.z()};
+        // The gradient (wrt to UVW):
+        Vector3 gradient(
+            - (2 * coefficients[0] * u + 2 * coefficients[1] * v 
+                + coefficients[3]),
+            - (2 * coefficients[1] * u + 2 * coefficients[2] * v 
+                + coefficients[4]), 
+            1.0
+        );
+        Vector3 gradientXYZ(
+            uBasis * gradient,
+            vBasis * gradient,
+            normal * gradient
+        );
+        return gradientXYZ;
     }
 
 };

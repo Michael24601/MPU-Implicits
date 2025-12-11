@@ -10,6 +10,7 @@
 
 // Pure virtual class for a local fir function Q(x)
 class LocalFitFunction{
+    
 public:
     virtual real evaluate(const Vector3& input) const = 0;
     virtual Vector3 evaluateGradient(const Vector3& input) const = 0;

@@ -6,10 +6,11 @@
 #include "tests/kdTree/insert.hpp"
 #include "tests/kdTree/bulkInsert.hpp"
 #include "tests/kdTree/timeComplexity.hpp"
+#include "tests/conjugateGradient/solver.hpp"
 
 int main(){
 
-    timeComplexityTest();
+    solverTest();
 
     return 0;
 }

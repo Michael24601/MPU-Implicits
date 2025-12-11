@@ -26,6 +26,26 @@ public:
     }
 
 
+    Matrix(int n){
+        data = std::vector<std::vector<real>>(n, std::vector<real>(n, 0.0));
+    }
+
+
+    // Creates a matrix that is the outer product of the given vector
+    Matrix(const std::vector<real>& v){
+        if(data.size() == 0){
+            throw std::invalid_argument("Input can't be an empty vector\n");
+        }
+        this->data.resize(v.size()); 
+        for(int i = 0; i < v.size(); i++){
+            this->data[i].resize(v.size());
+            for(int j = 0; j < v.size(); j++){
+                this->data[i][j] = v[i] * v[j];
+            }
+        }
+    }
+
+
     int rows() const{
         return data.size();
     }

@@ -10,7 +10,7 @@ std::vector<Point> generatePoints(int n, float min, float max, int seed){
     points.reserve(n);
 
     std::mt19937 rng(seed);
-    std::uniform_real_distribution<float> distribution(min, max);
+    std::uniform_real_distribution<real> distribution(min, max);
 
     for (size_t i = 0; i < n; i++) {
         float x = distribution(rng);

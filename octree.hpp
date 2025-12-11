@@ -12,7 +12,7 @@
 #include "generalQuadric.hpp"
 #include "kdTree3.hpp"
 #include "cubeOffset.hpp"
-
+#include "quadraticBSpline.hpp"
 
 class Octree{
 private:
@@ -164,20 +164,23 @@ private:
             real theta = (it == points.end() ? 0 : 
                 it->getNormal() * normalMean);
 
-            if(points.size() > 2 * N_MIN && theta > HALF_PI){
+            if((points.size() > 2 * N_MIN && theta > HALF_PI) 
+                || USE_QUADRIC_ONLY){
 
                 // General quadric case
                 GeneralQuadric* quadric = new GeneralQuadric();
                 
-                Vector3 corners[8];
+                // The auxiliary points are the corners and the centroid
+                std::vector<Vector3> auxiliary(9);
+                auxiliary[0] = centroid;
                 // We need half of this cube's diagonal
                 real offset = halfPower[depth+1] * INV_SQRT3;
-
+                
                 for(int i = 0; i < 8; i++){
-                    corners[i] = centroid + (cubeCenterOffset[i] * offset);
+                    auxiliary[i+1] = centroid + (cubeCenterOffset[i] * offset);
                 }
 
-                quadric->fit(points, corners);
+                quadric->fit(points, auxiliary);
                 this->localFitFunction = quadric;
             }
             else if(points.size() > 2 * N_MIN){
@@ -220,8 +223,8 @@ private:
         // Evaluates the b-spline of the local function at the
         // given point
         real evaluateQuadraticBSpline(const Vector3& p) const {
-            // TODO: finish this.
-            return 1.0;
+            // Just calls the B-spline evaluate function
+            return QuadraticBSpline::evaluate(centroid, radius, p);
         }
 
     };

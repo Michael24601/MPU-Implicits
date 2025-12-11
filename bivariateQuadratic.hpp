@@ -102,11 +102,15 @@ public:
 
         // To evaluate the gradient at a point xyz, we first
         // convert it to uvw, get the gradient nabla uvw, and
-        // then multiply each element by the basis vectorx u, v, and w 
-        // to get the gradient of xyz (because the gradient is a normal,
-        // that is, it is covariant, so transforming the gradient
-        // from uvw to xyz uses the same matrix as transforming
-        // a contravariant vector from xyz to uvw, that is).
+        // then we use the multivariate chain rule to get back to xyz.
+        // In particular, we know that a linear transformation A
+        // is a function f: R^3 -> R^3, so it will have a Jacobian,
+        // which will happen to be the matrix A itself.
+        // By the multivariate chain rule:
+        // f(g(x, y, z))    = J_g^T * (nabla_{uvw} f(u, v, w))
+        //                  = A^T * nabla_{uvw} f(u, v, w)
+        // So we just need to multiply the gradient by the transpose
+        // of the basis matrix we used to transform xyz to uvw.
         Vector3 uvw = transform(input);
         real u{uvw.x()}, v{uvw.y()}, w{uvw.z()};
         // The gradient (wrt to UVW):
@@ -117,11 +121,12 @@ public:
                 + coefficients[4]), 
             1.0
         );
-        Vector3 gradientXYZ(
-            uBasis * gradient,
-            vBasis * gradient,
-            normal * gradient
-        );
+
+        // Multiplying by the transpose means the basis vectors,
+        // which were rows, become columns. So we take a
+        // linear combination instead of using the dot product.
+        Vector3 gradientXYZ(uBasis * gradient.x()
+            + vBasis * gradient.y() + normal * gradient.z());
         return gradientXYZ;
     }
 

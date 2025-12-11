@@ -22,11 +22,13 @@ public:
 
         typedef std::vector<real> Vector;
 
+        const real MAX_ERROR_SQUARED = MAX_CG_ERROR * MAX_CG_ERROR;
+
         Vector x0(A.columns(), 0);
         Vector r0 = Matrix::subtract(b, A * x0);
         Vector p0 = r0;
 
-        if(Matrix::dot(r0, r0) < MAX_CG_ERROR){
+        if(Matrix::dot(r0, r0) < MAX_ERROR_SQUARED){
             return x0;
         }
 
@@ -42,7 +44,7 @@ public:
             Vector x1 = Matrix::add(x0, Matrix::scale(p0, alpha));
             Vector r1 = Matrix::subtract(r0, Matrix::scale(prod, alpha));
 
-            if(Matrix::dot(r1, r1) < MAX_CG_ERROR){
+            if(Matrix::dot(r1, r1) < MAX_ERROR_SQUARED){
                 x0 = x1;
                 break;
             }

@@ -6,7 +6,9 @@
 
 // Precision
 typedef float real;
-inline float (*sqrtReal)(float) = ::sqrtf;
+inline real (*sqrtReal)(real) = ::sqrtf;
+
+#define USE_QUADRIC_ONLY true
 
 // Constants
 constexpr real PI = 3.141592653589793;
@@ -32,8 +34,8 @@ constexpr int MAX_DEPTH = 20;
 constexpr real EPSILON_ZERO = 0.5;
 
 // The conjugate gradient parameters
-constexpr real MAX_CG_ERROR = 1e-06;
-constexpr real MAX_CG_ITERATIONS = 50;
+constexpr real MAX_CG_ERROR = 1e-08;
+constexpr real MAX_CG_ITERATIONS = 100;
 
 // Stored here for faster lookup (1/2^n)
 constexpr real halfPower[MAX_DEPTH + 2] = {

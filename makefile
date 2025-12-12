@@ -1,6 +1,6 @@
 
 all:
-	g++ *.cpp -o build
+	g++ *.cpp -o ./build/build
 
 run: all
 	./build

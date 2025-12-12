@@ -7,10 +7,11 @@
 #include "tests/kdTree/bulkInsert.hpp"
 #include "tests/kdTree/timeComplexity.hpp"
 #include "tests/conjugateGradient/solver.hpp"
+#include "tests/evaluation/evaluation.hpp"
 
 int main(){
 
-    solverTest();
+    evaluationTest();
 
     return 0;
 }

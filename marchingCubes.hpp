@@ -50,6 +50,7 @@ void writeToFile(const Cube&, std::ofstream&, std::ofstream&,
 // (here nx, ny, and nz is the number of cubes + 1), and whether to
 // use the middle point or interpolate to get the triangle vertices
 // along the edges.
+// Note, we expect the shape to be somewhere between (0, 0, 0) and range.
 void marchingCubes(
     const std::function<real(const Vector3&)>& function,
     const Vector3& range, 

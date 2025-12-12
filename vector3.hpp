@@ -121,8 +121,8 @@ public:
 
 
     void normalize(){
-        float d = length();
-        if(abs(d) > EPSILON){
+        real d = length();
+        if(std::abs(d) > EPSILON){
             data[0] /= d;
             data[1] /= d;
             data[2] /= d;

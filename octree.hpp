@@ -36,6 +36,32 @@ private:
         Node* child[8] = {nullptr};
         bool leaf;
 
+        
+        // Calculates the maximum angle theta between
+        // the normals of the points and the normalized arithmetic
+        // mean of the points.
+        static real computeMaxTheta(const std::vector<Point>& points){
+            Vector3 normalMean = std::accumulate(
+                points.begin(), points.end(), Vector3::ORIGIN, 
+                [](Vector3& acc, const Point& s) {
+                    return acc + s.getNormal();
+                }
+            );
+            normalMean.normalize();
+
+            auto it = std::max_element(
+                points.begin(), points.end(), 
+                [&normalMean](const Point& p1, const Point& p2) {
+                    return p1.getNormal() * normalMean 
+                        < p2.getNormal() * normalMean;
+                }
+            );
+            // This part just returns the dot product with the maximum,
+            // assuming it was found.
+            return (it == points.end() ? 0 : it->getNormal() * normalMean);
+        } 
+
+
     public:
 
         Node(int depth, const Vector3& centroid) : 
@@ -109,7 +135,7 @@ private:
         // Subdivides at this node by initializing 8 children
         void subdivide(){
             if(depth == MAX_DEPTH){
-                throw std::exception("Tree is at maximum depth");
+                throw std::runtime_error("Tree is at maximum depth");
                 return;
             }
 
@@ -132,37 +158,37 @@ private:
             }
         }
 
+
+        // Generates the auxiliary points of a node (corners and centroid).
+        std::vector<Vector3> generateAuxiliaryPoints() const{
+            // The auxiliary points are the corners and the centroid
+            std::vector<Vector3> auxiliary(9);
+            auxiliary[0] = centroid;
+            // We need half of this cube's diagonal
+            real offset = halfPower[depth+1] * INV_SQRT3;
+            
+            for(int i = 0; i < 8; i++){
+                auxiliary[i+1] = centroid + (cubeCenterOffset[i] * offset);
+            }
+            return auxiliary;
+        }
+
     
         // Assuming that this node contains the given points,
         // this function fits a local function to the points.
         // Note that this function assumes that points is not empty.
-        void fitLocalFunction(const std::vector<Point>& points){
+        // This function can return false if no fitting was able to be
+        // done.
+        bool fitLocalFunction(const std::vector<Point>& points){
 
             // Only fitted on leafs
             if(!leaf){
-                return;
+                return false;
             }
 
-            // It first calculates the maximum angle theta between
-            // the normals of the points and the normalized arithmetic
-            // mean of the points.
-            Vector3 normalMean = std::accumulate(
-                points.begin(), points.end(), 0.0, 
-                [](Vector3& acc, const Point& s) {
-                    return acc + s.getNormal();
-                }
-            );
-            normalMean.normalize();
-
-            auto it = std::max_element(
-                points.begin(), points.end(), 
-                [&normalMean](const Point& p1, const Point& p2) {
-                    return p1.getNormal() * normalMean 
-                        < p2.getNormal() * normalMean;
-                }
-            );
-            real theta = (it == points.end() ? 0 : 
-                it->getNormal() * normalMean);
+            // This just computes the maximum angle theta
+            // between the normals and the mean normal.
+            real theta = computeMaxTheta(points);
 
             if((points.size() > 2 * N_MIN && theta > HALF_PI) 
                 || USE_QUADRIC_ONLY){
@@ -171,24 +197,24 @@ private:
                 GeneralQuadric* quadric = new GeneralQuadric();
                 
                 // The auxiliary points are the corners and the centroid
-                std::vector<Vector3> auxiliary(9);
-                auxiliary[0] = centroid;
-                // We need half of this cube's diagonal
-                real offset = halfPower[depth+1] * INV_SQRT3;
-                
-                for(int i = 0; i < 8; i++){
-                    auxiliary[i+1] = centroid + (cubeCenterOffset[i] * offset);
-                }
+                std::vector<Vector3> auxiliary = generateAuxiliaryPoints();
 
-                quadric->fit(points, auxiliary);
-                this->localFitFunction = quadric;
+                if(quadric->fit(points, auxiliary, centroid, radius)){
+                    this->localFitFunction = quadric;
+                    return true;
+                }
+                else{
+                    delete quadric;
+                    return false;
+                }
             }
             else if(points.size() > 2 * N_MIN){
-                
                 // Bivariate
+                return false;
             }
             else{
                 // Edges and corners
+                return false;
             }
 
         }
@@ -201,7 +227,7 @@ private:
                 return localFitFunction->evaluate(p);
             }
             else{
-                throw std::exception("Local function undefined on node\n");
+                throw std::runtime_error("Local function undefined on node\n");
             }
         }
 
@@ -215,7 +241,7 @@ private:
                 return localFitFunction->approximationError(points);
             }
             else{
-                throw std::exception("Local function undefined on node\n");
+                throw std::runtime_error("Local function undefined on node\n");
             }
         }
 
@@ -254,11 +280,12 @@ private:
         std::vector<Point> points;
         tree.rangeQuery(ptr->getCentroid(), ptr->getRadius(), points);
 
-        // In the empty ball case, no further subdivision i done,
-        // we fit the local function and move on.
+        // In the empty ball case, no further subdivision is done.
+        // We increase the radius as usual, but we don't subdivide it
+        // later.
+        bool emptyFlag = false;
         if(points.size() == 0){
-            ptr->fitLocalFunction(points);
-            return;
+            emptyFlag = true;
         }
         
         // If we have some points in the sphere, we ensure we have
@@ -270,24 +297,52 @@ private:
         }
         
         // Once we have enough points, we fit a local function.
-        ptr->fitLocalFunction(points);
+        // If it doesn't work for any reason (plenty of valid reasons)
+        // we just subdivide automatically.
+        if(!ptr->fitLocalFunction(points)){
+            // if the cell was initially empty, we don't subdivide as
+            // discussed, so we leave the function empty.
+            // This is to ensure we don't recurse forever.
+            if(emptyFlag){
+                // TODO:
+                return;
+            }
+
+            // Otherwise we subdivide
+            ptr->subdivide();
+            for(int i = 0; i < 8; i++){
+                subdivideSpaceAux(ptr->getChild(i), tree);
+            }
+
+            return;
+        }
+
+        // If this flag is true, no subdivision is needed, so no need
+        // for an error approximation.
+        if(emptyFlag){
+            return;
+        }
         
         // If this error metric is too large, we have to disregard
         // the local fit function and subdivide.
-        if(ptr->evaluateErrorApproximation(points) > EPSILON_ZERO){
+        real error = ptr->evaluateErrorApproximation(points);
+        if(error > EPSILON_ZERO){
+            // We delete the local function first since it is no
+            // longer useful.
             ptr->deallocateLocalFunction();
             ptr->subdivide();
             for(int i = 0; i < 8; i++){
                 subdivideSpaceAux(ptr->getChild(i), tree);
             }
-        }        
+            return;
+        }
 
         // Otherwise we keep the function and the node remains a leaf
     }
 
 
-    void evaluateAux(const Vector3& p, NodePtr ptr, float& sum, 
-        float& factor){
+    void evaluateAux(const Vector3& p, NodePtr ptr, real& sum, 
+        real& normalizationFactor){
         
         if(!ptr){
             return;
@@ -301,13 +356,13 @@ private:
 
                 real spline = ptr->evaluateQuadraticBSpline(p);
                 sum += ptr->evaluateLocalFitFunction(p) * spline;
-                factor *= spline;
+                normalizationFactor += spline;
             }
             // Otherwise we check its children
             else{
                 // Then we visit the children
                 for(int i = 0; i < 8; i++){
-                    evaluateAux(p, ptr->getChild(i), sum, factor);
+                    evaluateAux(p, ptr->getChild(i), sum, normalizationFactor);
                 }
             }
         }
@@ -333,9 +388,15 @@ public:
 
 
     real evaluate(const Vector3& p){
+        // In case the point is outside the root cube
+        if(std::abs(p.x()) > INV_SQRT3 * 0.5 || std::abs(p.y()) > INV_SQRT3 * 0.5
+            || std::abs(p.z()) > INV_SQRT3 * 0.5){
+            return 0.0;
+        }
+        
         // Sum and normalization factor
-        float sum = 0.0;
-        float factor = 1.0;
+        real sum = 0.0;
+        real normalizationFactor = 0.0;
         // We will go through the tree, exploring branches only
         // if the sphere contains the given point.
         // When we get to a leaf, and it contains the point,
@@ -343,8 +404,8 @@ public:
         // with it, and add it to the sum.
         // We also keep track of the sum of weight functions (those
         // that are non-zero) so we can normalize the result.
-        evaluateAux(p, root, sum, factor);
-        sum /= factor;
+        evaluateAux(p, root, sum, normalizationFactor);
+        sum /= normalizationFactor;
         return sum;
     }
 

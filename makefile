@@ -1,9 +1,9 @@
 
 all:
-	g++ *.cpp -o build/app
+	g++ *.cpp -o build
 
 run: all
-	./build/app
+	./build
 
 clean:
 	rm -rf build

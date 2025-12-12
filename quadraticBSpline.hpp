@@ -34,8 +34,8 @@ public:
         real input = (p - center).length() / radius;
         
         // First we map the input, which is naturally in [0, 1]
-        // to be in [0, 3], then we can evaluate the B-spline.
-        return evaluateBSpline(input * 3.0);
+        // to be in [0, 3/2], then we can evaluate the B-spline.
+        return evaluateBSpline(input * 1.5);
     }
 
 };

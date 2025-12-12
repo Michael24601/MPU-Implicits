@@ -5,17 +5,17 @@
 #include "../../kdTree3.hpp"
 #include <random>
 
-std::vector<Point> generatePoints(int n, float min, float max, int seed){
+std::vector<Point> generatePoints(int n, real min, real max, int seed){
     std::vector<Point> points;
     points.reserve(n);
 
     std::mt19937 rng(seed);
     std::uniform_real_distribution<real> distribution(min, max);
 
-    for (size_t i = 0; i < n; i++) {
-        float x = distribution(rng);
-        float y = distribution(rng);
-        float z = distribution(rng);
+    for (int i = 0; i < n; i++) {
+        real x = distribution(rng);
+        real y = distribution(rng);
+        real z = distribution(rng);
 
         // normal doesn't matter for the purpose of this test
         points.push_back(Point(x, y, z, 0, 0, 1));

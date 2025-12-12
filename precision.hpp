@@ -5,8 +5,8 @@
 #include <cmath>
 
 // Precision
-typedef float real;
-inline real (*sqrtReal)(real) = ::sqrtf;
+typedef double real;
+inline real (*sqrtReal)(real) = ::sqrt;
 
 #define USE_QUADRIC_ONLY true
 
@@ -31,7 +31,9 @@ constexpr real LAMBDA = 0.1;
 constexpr int MAX_DEPTH = 20;
 
 // The maximum accepted approximation error
-constexpr real EPSILON_ZERO = 0.5;
+// (Must be careful with this one, too small a value and the octree
+// never stops subsdividing and the max depth is always reached)
+constexpr real EPSILON_ZERO = 0.01;
 
 // The conjugate gradient parameters
 constexpr real MAX_CG_ERROR = 1e-08;
@@ -39,28 +41,28 @@ constexpr real MAX_CG_ITERATIONS = 100;
 
 // Stored here for faster lookup (1/2^n)
 constexpr real halfPower[MAX_DEPTH + 2] = {
-    1.0f,
-    0.5f,
-    0.25f,
-    0.125f,
-    0.0625f,
-    0.03125f,
-    0.015625f,
-    0.0078125f,
-    0.00390625f,
-    0.001953125f,
-    0.0009765625f,
-    0.00048828125f,
-    0.000244140625f,
-    0.0001220703125f,
-    0.00006103515625f,
-    0.000030517578125f,
-    0.0000152587890625f,
-    0.00000762939453125f,
-    0.000003814697265625f,
-    0.0000019073486328125f,
-    0.00000095367431640625f,
-    0.000000476837158203125f
+    1.0,
+    0.5,
+    0.25,
+    0.125,
+    0.0625,
+    0.03125,
+    0.015625,
+    0.0078125,
+    0.00390625,
+    0.001953125,
+    0.0009765625,
+    0.00048828125,
+    0.000244140625,
+    0.0001220703125,
+    0.00006103515625,
+    0.000030517578125,
+    0.0000152587890625,
+    0.00000762939453125,
+    0.000003814697265625,
+    0.0000019073486328125,
+    0.00000095367431640625,
+    0.000000476837158203125
 };
 
 #endif

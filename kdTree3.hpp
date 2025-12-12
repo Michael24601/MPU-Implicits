@@ -1,9 +1,13 @@
+// While writing this class, I mostly cross-referenced my code
+// with the wikipedia article on kd-Trees:
+// https://en.wikipedia.org/wiki/K-d_tree
 
 #ifndef KD_TREE_H
 #define KD_TREE_H
 
 #include <vector>
 #include <algorithm>
+#include <queue>
 #include "vector3.hpp"
 #include "point.hpp"
 
@@ -22,6 +26,18 @@ private:
         Node(const Point& point) : point{point}, 
             left{nullptr}, right{nullptr}{}
 
+    };
+
+
+    // Helper class
+    struct Neighbor{
+        Point point;
+        real distanceSquared;
+
+        // Required for the priority queue
+        bool operator<(const Neighbor& n) const {
+            return distanceSquared < n.distanceSquared;
+        }
     };
 
 
@@ -101,6 +117,55 @@ private:
         return node;
     }
 
+
+    // This is a nearest neighbor search expedited by the kd tree.
+    void kNNSearchAux(const Vector3& p, int k, 
+        NodePtr ptr, int axis, std::priority_queue<Neighbor>& knn) const {
+        
+        if(!ptr){
+            return;
+        }
+
+        // First we check if the current point is closer to the reference
+        // point than the furthest point in the priority queue.
+        // Unless the queue has less than k points, in which case we just
+        // add it.
+        real lengthSquared = (p - ptr->point.getPoint()).lengthSquared();
+        if(knn.size() < k){
+            knn.push(Neighbor{ptr->point, lengthSquared});
+        }
+        else if(lengthSquared < knn.top().distanceSquared){
+            knn.pop();
+            knn.push(Neighbor{ptr->point, lengthSquared});
+        } 
+
+        // Next we check which subtree is closer so we can recurse
+        // into it.
+        // We check the distance between p and the current point
+        // with respect to the current axis.
+        real distance = p[axis] - ptr->point.getPoint()[axis];
+        NodePtr closer, farther;
+        if(distance < 0){
+            closer = ptr->left;
+            farther = ptr->right;
+        }
+        else{
+            closer = ptr->right;
+            farther = ptr->left;
+        }
+
+        kNNSearchAux(p, k, closer, (axis+1)%3, knn);
+
+        // We only search the farther subtree if we need to, that is,
+        // if the distance to the point (with respect to the current
+        // axis) is smaller than the largest distance to a point
+        // in the priority queue
+        if(distance * distance < knn.top().distanceSquared){
+            kNNSearchAux(p, k, farther, (axis+1)%3, knn);
+        }
+    }
+
+
 public:
 
     KdTree3() : root{nullptr}{}
@@ -146,7 +211,7 @@ public:
     }
 
     
-    // Returns all points within a certain range (returns only the indexes)
+    // Returns all points within a certain range.
     void rangeQuery(const Vector3& center, real radius, 
         std::vector<Point>& points) const {
 
@@ -171,6 +236,25 @@ public:
         }
         else{
             root = bulkInsertAux(points, 0, points.size()-1, 0);
+        }
+    }
+
+
+    // This is a k-nearest neighbor search.
+    // It can be used to for the quadric fitting.
+    void kNNSearch(const Vector3& p, int k, 
+        std::vector<Point>& points) const {
+
+        std::priority_queue<Neighbor> knn;
+
+        kNNSearchAux(p, k, root, 0, knn);
+
+        // Then we just add the result into the vector
+        points.reserve(points.size() + knn.size());
+
+        while(!knn.empty()) {
+            points.push_back(knn.top().point);
+            knn.pop();
         }
     }
 

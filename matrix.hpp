@@ -26,14 +26,14 @@ public:
     }
 
 
-    Matrix(int n){
-        data = std::vector<std::vector<real>>(n, std::vector<real>(n, 0.0));
+    Matrix(int n, real value = 0.0){
+        data = std::vector<std::vector<real>>(n, std::vector<real>(n, value));
     }
 
 
     // Creates a matrix that is the outer product of the given vector
     Matrix(const std::vector<real>& v){
-        if(data.size() == 0){
+        if(v.size() == 0){
             throw std::invalid_argument("Input can't be an empty vector\n");
         }
         this->data.resize(v.size()); 
@@ -126,7 +126,8 @@ public:
     static real dot(const std::vector<real>& u, 
         const std::vector<real>& v){
         if(v.size() != u.size() || v.size() == 0){
-            throw std::invalid_argument("Vector dimensions must match\n");  
+            throw std::invalid_argument(
+                "Vector dimensions must match for the dot product\n");  
         }
 
         real result = 0;
@@ -140,7 +141,8 @@ public:
      static std::vector<real> add(const std::vector<real>& u, 
         const std::vector<real>& v){
         if(v.size() != u.size() || v.size() == 0){
-            throw std::invalid_argument("Vector dimensions must match\n");  
+            throw std::invalid_argument(
+                "Vector dimensions must match for addition\n");  
         }
 
         std::vector<real> result;
@@ -155,7 +157,8 @@ public:
     static std::vector<real> subtract(const std::vector<real>& u, 
         const std::vector<real>& v){
         if(v.size() != u.size() || v.size() == 0){
-            throw std::invalid_argument("Vector dimensions must match\n");  
+            throw std::invalid_argument(
+                "Vector dimensions must matchfor subtraction\n");  
         }
 
         std::vector<real> result;

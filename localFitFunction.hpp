@@ -10,7 +10,6 @@
 
 // Pure virtual class for a local fir function Q(x)
 class LocalFitFunction{
-    
 public:
     virtual real evaluate(const Vector3& input) const = 0;
     virtual Vector3 evaluateGradient(const Vector3& input) const = 0;
@@ -22,7 +21,9 @@ public:
     real approximationError(const std::vector<Point>& points) const{
         real max = 0;
         for(int i = 0; i < points.size(); i++){
-            real error = abs(evaluate(points[i].getPoint()));
+            // Note, we use std::abs, since abs apparently causes
+            // floating point numbers to become 0.
+            real error = std::abs(evaluate(points[i].getPoint()));
             error /= evaluateGradient(points[i].getPoint()).length();
             if(error > max){
                 max = error;

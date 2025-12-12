@@ -38,7 +38,7 @@ private:
         // We pick some random vector r not parallel to the normal
         // and get u from their cross product.
         Vector3 r(0, 0, 1);
-        if(abs(r * normal - 1.0) < EPSILON){
+        if(std::abs(r * normal - 1.0) < EPSILON){
             r = Vector3(1, 0, 0);
         }
         this->uBasis = (normal % r).normalized();

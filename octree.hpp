@@ -80,7 +80,7 @@ private:
         Node(int depth, const Vector3& centroid) : 
             depth{depth}, centroid{centroid}, leaf{true},
             child{nullptr, nullptr, nullptr, nullptr, nullptr, 
-                nullptr, nullptr, nullptr}{
+                nullptr, nullptr, nullptr}, localFitFunction{nullptr}{
 
             // By default the radius is ALPHA * diagonal()    
             radius = ALPHA * getDiagonal();
@@ -95,6 +95,7 @@ private:
         void deallocateLocalFunction(){
             if(localFitFunction){
                 delete localFitFunction;
+                localFitFunction = nullptr;
             }
         }
 
@@ -125,7 +126,7 @@ private:
         void incrementRadius(){
             // By default we always add LAMBDA when incrementing
             // the radius.
-            radius += LAMBDA;
+            radius = radius + LAMBDA * (ALPHA * getDiagonal());
         }
 
 
@@ -193,7 +194,8 @@ private:
         // Note that this function assumes that points is not empty.
         // This function can return false if no fitting was able to be
         // done.
-        bool fitLocalFunction(const std::vector<Point>& points){
+        bool fitLocalFunction(const std::vector<Point>& points, 
+            const KdTree3& tree){
 
             // Only fitted on leafs
             if(!leaf){
@@ -217,7 +219,7 @@ private:
                 // The auxiliary points are the corners and the centroid
                 std::vector<Vector3> auxiliary = generateAuxiliaryPoints();
 
-                if(quadric->fit(points, auxiliary, centroid, radius)){
+                if(quadric->fit(points, auxiliary, centroid, radius, tree)){
                     this->localFitFunction = quadric;
                     return true;
                 }
@@ -261,8 +263,7 @@ private:
             // so we need to ensure we only call this on leafs.
             if(localFitFunction){
                 // We scale the error by teh diagonal
-                return localFitFunction->approximationError(points) 
-                    * getDiagonal();
+                return localFitFunction->approximationError(points);
             }
             else{
                 throw std::runtime_error("Local function undefined on node\n");
@@ -304,8 +305,6 @@ private:
         std::vector<Point> points;
         tree.rangeQuery(ptr->getCentroid(), ptr->getRadius(), points);
 
-        std::cout << "a\n";
-
         // In the empty ball case, no further subdivision is done.
         // We increase the radius as usual, but we don't subdivide it
         // later.
@@ -314,9 +313,6 @@ private:
             emptyFlag = true;
         }
 
-        std::cout << "b\n";
-
-        
         // If we have some points in the sphere, we ensure we have
         // enough points, by incrementing the radius.
         while(points.size() < N_MIN){
@@ -325,9 +321,6 @@ private:
             tree.rangeQuery(ptr->getCentroid(), ptr->getRadius(), points);
         }
 
-        std::cout << "c\n";
-
-        
         // Once we have enough points, we fit a local function.
         // If the function returns false, it means it tried to fit
         // a local function but for some reason the result is not
@@ -336,10 +329,7 @@ private:
         // approximation), unless the MAX_DEPTH has been reached
         // or the sphere was originally empty, in which case we
         // don't subdivide.
-        if(!ptr->fitLocalFunction(points)){
-
-            std::cout << "d\n";
-
+        if(!ptr->fitLocalFunction(points, tree)){
 
             // We immediatly subdivide if we can subdivide
             if(!emptyFlag && ptr->subdivide()){
@@ -350,8 +340,6 @@ private:
                 }
                 return;
             }
-
-            std::cout << "e\n";
  
             // Otherwise, if we can't subdivide because we reached
             // the max depth for example, the function remains empty.
@@ -361,25 +349,16 @@ private:
             return;
         }
 
-        std::cout << "f\n";
-
-
-
         // If this flag is true, no subdivision is needed, so no need
         // for an error approximation.
         if(emptyFlag){
             return;
         }
 
-        std::cout << "g\n";
-
-        
         // If this error metric is too large, we have to disregard
         // the local fit function and subdivide.
         real error = ptr->evaluateErrorApproximation(points);
         if(error > EPSILON_ZERO){
-
-            std::cout << "h\n";
 
             // If the error is too large, we delete the function and
             // subdivide, unless we can't (if MAX_DEPTH is reached)
@@ -394,9 +373,7 @@ private:
             }
             return;
         }
-
-        std::cout << "i\n";
-
+        
         // Otherwise we keep the function and the node remains a leaf
     }
 

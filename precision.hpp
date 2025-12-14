@@ -27,12 +27,12 @@ constexpr real ALPHA = 0.75;
 constexpr real LAMBDA = 0.1;
 
 // The maximum depth the octree can go
-constexpr int MAX_DEPTH = 10;
+constexpr int MAX_DEPTH = 6;
 
 // The maximum accepted approximation error
 // (Must be careful with this one, too small a value and the octree
 // never stops subsdividing and the max depth is always reached)
-constexpr real EPSILON_ZERO = 0.01;
+constexpr real EPSILON_ZERO = 0.001;
 
 // The conjugate gradient parameters
 constexpr real MAX_CG_ERROR = 1e-8;
@@ -62,8 +62,6 @@ constexpr real halfPower[22] = {
     0.000003814697265625,
     0.0000019073486328125,
     0.00000095367431640625,
-    0.000000476837158203125
-};
-
+    0.000000476837158203125};
 
 #endif

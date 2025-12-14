@@ -10,10 +10,9 @@
 #include <random>
 
 
-void randomBarycentric(real& u, real& v) {
-    std::random_device rd;
-    static std::mt19937 mt(rd());
-    static std::uniform_real_distribution<real> distribution(0.0, 1.0);
+void randomBarycentric(real& u, real& v, int seed) {
+    std::mt19937 mt(seed);
+    std::uniform_real_distribution<real> distribution(0.0, 1.0);
     u = distribution(mt);
     v = distribution(mt);
     if (u + v > 1.0) {
@@ -78,7 +77,7 @@ std::vector<Point> sampleObjTriangles(const std::string& filename, int k) {
 
             for (int i = 0; i < k; i++) {
                 real u, vCoord;
-                randomBarycentric(u, vCoord);
+                randomBarycentric(u, vCoord, triangleIndex + i);
                 real w = 1.0f - u - vCoord;
 
                 Vector3 samplePoint = v0 * w + v1 * u + v2 * vCoord;
@@ -121,7 +120,7 @@ std::vector<Point> sampleObjTriangles(const std::string& filename, int k) {
 void bunnyTest(){
 
     // We first generate the points
-    std::vector<Point> points = sampleObjTriangles("input/bunny.obj", 10);
+    std::vector<Point> points = sampleObjTriangles("input/bunny.obj", 1);
     KdTree3 tree;
     tree.bulkInsert(points);
 

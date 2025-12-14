@@ -36,7 +36,7 @@ private:
 
         // Required for the priority queue
         bool operator<(const Neighbor& n) const {
-            return distanceSquared > n.distanceSquared;
+            return distanceSquared < n.distanceSquared;
         }
     };
 
@@ -119,7 +119,7 @@ private:
 
 
     // This is a nearest neighbor search expedited by the kd tree.
-    void kNNSearchAux(const Vector3& p, int k, 
+    void kNNSearchAux(const Vector3& p, int k, real radius, const Vector3& center,
         NodePtr ptr, int axis, std::priority_queue<Neighbor>& knn) const {
         
         if(!ptr){
@@ -130,14 +130,20 @@ private:
         // point than the furthest point in the priority queue.
         // Unless the queue has less than k points, in which case we just
         // add it.
+        // If the point is inside the sphere that is.
+        
         real lengthSquared = (p - ptr->point.getPoint()).lengthSquared();
-        if(knn.size() < k){
-            knn.push(Neighbor{ptr->point, lengthSquared});
+        real distToCenterSquared = (ptr->point.getPoint() - center).lengthSquared();
+        
+        if(distToCenterSquared <= radius * radius) {
+            if(knn.size() < k){
+                knn.push(Neighbor{ptr->point, lengthSquared});
+            }
+            else if(!knn.empty() && lengthSquared < knn.top().distanceSquared){
+                knn.pop();
+                knn.push(Neighbor{ptr->point, lengthSquared});
+            } 
         }
-        else if(!knn.empty() && lengthSquared < knn.top().distanceSquared){
-            knn.pop();
-            knn.push(Neighbor{ptr->point, lengthSquared});
-        } 
 
         // Next we check which subtree is closer so we can recurse
         // into it.
@@ -154,14 +160,14 @@ private:
             farther = ptr->left;
         }
 
-        kNNSearchAux(p, k, closer, (axis+1)%3, knn);
+        kNNSearchAux(p, k, radius, center, closer, (axis+1)%3, knn);
 
         // We only search the farther subtree if we need to, that is,
         // if the distance to the point (with respect to the current
         // axis) is smaller than the largest distance to a point
         // in the priority queue
-        if(distance * distance < knn.top().distanceSquared){
-            kNNSearchAux(p, k, farther, (axis+1)%3, knn);
+        if(knn.size() < k || distance * distance < knn.top().distanceSquared){
+            kNNSearchAux(p, k, radius, center, farther, (axis+1)%3, knn);
         }
     }
 
@@ -242,12 +248,13 @@ public:
 
     // This is a k-nearest neighbor search.
     // It can be used to for the quadric fitting.
-    void kNNSearch(const Vector3& p, int k, 
-        std::vector<Point>& points) const {
+    // Only includes point within range of center.
+    void kNNSearch(const Vector3& p, int k, real radius, 
+        const Vector3& center, std::vector<Point>& points) const {
 
         std::priority_queue<Neighbor> knn;
 
-        kNNSearchAux(p, k, root, 0, knn);
+        kNNSearchAux(p, k, radius, center, root, 0, knn);
 
         // Then we just add the result into the vector
         points.reserve(points.size() + knn.size());

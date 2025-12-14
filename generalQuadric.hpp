@@ -88,27 +88,24 @@ private:
     static void filterAuxiliaryPoints(
         const std::vector<Point>& points,
         const std::vector<Vector3>& aux, int k,
+        const KdTree3& tree, 
+        real radius,
+        const Vector3& center,
         std::vector<Vector3>& usableAux,
         std::vector<real>& diags
     ){
-        // For each aux point q, we will find the k nearest neighbors,
-        // and compute n_i . (q - p_i) with its k neighbors.
-        // It is usable if the sign matches.
-        KdTree3 tree;
-        // We have to copy the points since the bulk insert modifies them
-        std::vector<Point> copy(points);
-        tree.bulkInsert(copy);
 
         for(int i = 0; i < aux.size(); i++){
 
             std::vector<Point> closest;
-            tree.kNNSearch(aux[i], k, closest);
+            tree.kNNSearch(aux[i], k, radius, center, closest);
             real prod;
             bool flagSame = true;
             // For the diagonals
             real sum = 0.0;
 
             for(int j = 0; j < closest.size(); j++){
+
                 real dotProduct = closest[j].getNormal() 
                     * (aux[i] - closest[j].getPoint());
                 sum += dotProduct;
@@ -140,7 +137,8 @@ public:
     // and the cell needs to be subdivided
     bool fit(const std::vector<Point>& points, 
         const std::vector<Vector3>& aux,
-        const Vector3& center, real radius
+        const Vector3& center, real radius,
+        const KdTree3& tree
     ){
 
         if(points.empty() || aux.empty()){
@@ -150,7 +148,8 @@ public:
         // First we check which auxiliary points are actually usable
         std::vector<Vector3> usableAux;
         std::vector<real> diags;
-        filterAuxiliaryPoints(points, aux, 6, usableAux, diags);
+        filterAuxiliaryPoints(points, aux, 6, tree, radius, center, 
+            usableAux, diags);
 
         // If no aux points are usable, we can't fit a function
         if(usableAux.empty()){
@@ -177,7 +176,7 @@ public:
         vec.setZ(coefficients[8]);
         scalar = coefficients[9];
 
-        return (!usableAux.empty());
+        return true;
     }
 
 

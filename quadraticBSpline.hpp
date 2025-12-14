@@ -35,7 +35,7 @@ public:
         
         // First we map the input, which is naturally in [0, 1]
         // to be in [0, 3/2], then we can evaluate the B-spline.
-        return evaluateBSpline(input * 1.5);
+        return evaluateBSpline(input * 1.5 + 1.5);
     }
 
 };

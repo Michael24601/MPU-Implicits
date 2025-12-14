@@ -5,9 +5,9 @@
 #include "localFitFunction.hpp"
 #include "matrix.hpp"
 #include "monomialBasis.hpp"
-#include "quadraticBSpline.hpp"
 #include "conjugateGradient.hpp"
 #include "kdTree3.hpp"
+#include "weightFunction.hpp"
 
 // General Quadric
 class GeneralQuadric: public LocalFitFunction{
@@ -30,12 +30,12 @@ private:
     // Also returns the vector b in Mc = b.
     // We do these at the same time to save time, as they share
     // certain computations.
-    static void getLinearSystem(
+    void getLinearSystem(
         const std::vector<Point>& points, 
         const std::vector<Vector3>& aux, const std::vector<real>& diag,
         const Vector3& center, real radius,
         Matrix& m, std::vector<real>& b
-    ){
+    ) const {
         
         // First we will compute the vector containing the
         // monomial basis function values for each point and auxiliary
@@ -55,7 +55,7 @@ private:
             // Outerproduct
             Matrix outerProduct(basis);            
             // The b-spline
-            real bSplineValue = QuadraticBSpline::evaluate(center, 
+            real bSplineValue = WeightFunction::evaluate(center, 
                 radius, points[i].getPoint());
             sumP = sumP + (outerProduct * bSplineValue);
             sumBSplines += bSplineValue;
@@ -152,7 +152,7 @@ public:
         std::vector<real> diags;
         filterAuxiliaryPoints(points, aux, 6, usableAux, diags);
 
-        // If no aux points are usable, we can't fit the function
+        // If no aux points are usable, we can't fit a function
         if(usableAux.empty()){
             return false;
         }
@@ -164,6 +164,7 @@ public:
         // We just use a linear system solver
         std::vector<real> coefficients = ConjugateGradient::solve(m, b);
 
+        // We need to ensure the order matches
         matrix[0] = coefficients[0];
         matrix[2] = coefficients[1];
         matrix[5] = coefficients[2];
@@ -176,7 +177,7 @@ public:
         vec.setZ(coefficients[8]);
         scalar = coefficients[9];
 
-        return true;
+        return (!usableAux.empty());
     }
 
 

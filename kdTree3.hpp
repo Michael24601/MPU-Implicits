@@ -36,7 +36,7 @@ private:
 
         // Required for the priority queue
         bool operator<(const Neighbor& n) const {
-            return distanceSquared < n.distanceSquared;
+            return distanceSquared > n.distanceSquared;
         }
     };
 
@@ -134,7 +134,7 @@ private:
         if(knn.size() < k){
             knn.push(Neighbor{ptr->point, lengthSquared});
         }
-        else if(lengthSquared < knn.top().distanceSquared){
+        else if(!knn.empty() && lengthSquared < knn.top().distanceSquared){
             knn.pop();
             knn.push(Neighbor{ptr->point, lengthSquared});
         } 

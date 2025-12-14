@@ -36,6 +36,11 @@ public:
         return normal;
     }
 
+
+    void setPoint(const Vector3& point){
+        this->point = point;
+    }
+
 };
 
 #endif

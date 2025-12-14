@@ -10,9 +10,10 @@
 #include "vector3.hpp"
 #include "localFitFunction.hpp"
 #include "generalQuadric.hpp"
+#include "bivariateQuadratic.hpp"
 #include "kdTree3.hpp"
 #include "cubeOffset.hpp"
-#include "quadraticBSpline.hpp"
+#include "weightFunction.hpp"
 
 class Octree{
 private:
@@ -40,25 +41,37 @@ private:
         // Calculates the maximum angle theta between
         // the normals of the points and the normalized arithmetic
         // mean of the points.
-        static real computeMaxTheta(const std::vector<Point>& points){
-            Vector3 normalMean = std::accumulate(
-                points.begin(), points.end(), Vector3::ORIGIN, 
-                [](Vector3& acc, const Point& s) {
-                    return acc + s.getNormal();
-                }
-            );
-            normalMean.normalize();
+        void computeMaxTheta(const std::vector<Point>& points, 
+            real& cosTheta, Vector3& meanNormal) const {
 
-            auto it = std::max_element(
-                points.begin(), points.end(), 
-                [&normalMean](const Point& p1, const Point& p2) {
-                    return p1.getNormal() * normalMean 
-                        < p2.getNormal() * normalMean;
-                }
-            );
-            // This part just returns the dot product with the maximum,
-            // assuming it was found.
-            return (it == points.end() ? 0 : it->getNormal() * normalMean);
+            if(points.empty()){
+                cosTheta = 0.0;
+                meanNormal = Vector3::ORIGIN;
+                return;
+            }
+
+            // We need to calculate the weighted average,
+            // using the B-spline weights.
+            Vector3 mean = Vector3::ORIGIN;
+            for(int i = 0 ; i < points.size(); i++){
+                mean = mean + points[i].getNormal() 
+                    * evaluateWeightFunction(points[i].getPoint());
+            }
+            // It's enough to normalized to average out (since we
+            // need to normalize anyway)
+            mean.normalize();
+
+            // Max angle is the minimum dot product (no need
+            // to find the angle, using cos(theta) gives us as much
+            // information since the angle is restricted to [0, PI]).
+
+            real minDotProduct = 9999.0;
+            for(int i = 0; i < points.size(); i++){
+                minDotProduct = std::min(minDotProduct, 
+                    mean * points[i].getNormal());
+            }
+            cosTheta = minDotProduct;
+            meanNormal = mean;
         } 
 
 
@@ -127,35 +140,36 @@ private:
 
 
         // The diagonal of each subdivision is some power (1/2)^n.
-        real getDiagonal(){
+        real getDiagonal() const{
             return halfPower[depth];
         }
 
 
         // Subdivides at this node by initializing 8 children
-        void subdivide(){
-            if(depth == MAX_DEPTH){
-                throw std::runtime_error("Tree is at maximum depth");
-                return;
+        bool subdivide(){
+            // If the current node can't be subdivided for any reason,
+            // we return false
+            if(depth == MAX_DEPTH || !leaf){
+                return false;
             }
 
-            if(leaf){
-                // Ceases to be a leaf
-                leaf = false;
+            // Ceases to be a leaf
+            leaf = false;
 
-                // The diagonal for this cube is halfPower[depth],
-                // so the offset diagonal is at the quarter, that is is,
-                // halfPower[depth+2], which we know exists since we
-                // haven't reached the max depth.
-                // We multiply it by 1/sqrt3 to get the offset in x,
-                // y and z.
-                real offset = halfPower[depth+2] * INV_SQRT3;
+            // The diagonal for this cube is halfPower[depth],
+            // so the offset diagonal is at the quarter, that is is,
+            // halfPower[depth+2], which we know exists since we
+            // haven't reached the max depth.
+            // We multiply it by 1/sqrt3 to get the offset in x,
+            // y and z.
+            real offset = halfPower[depth+2] * INV_SQRT3;
 
-                for(int i = 0; i < 8; i++){
-                    child[i] = new Node(depth+1, 
-                        centroid + (cubeCenterOffset[i] * offset));
-                }
+            for(int i = 0; i < 8; i++){
+                child[i] = new Node(depth+1, 
+                    centroid + (cubeCenterOffset[i] * offset));
             }
+            
+            return true;
         }
 
 
@@ -187,11 +201,15 @@ private:
             }
 
             // This just computes the maximum angle theta
-            // between the normals and the mean normal.
-            real theta = computeMaxTheta(points);
+            // between the normals and the mean normal,
+            // as well as the mean normal;
+            real cosTheta;
+            Vector3 meanNormal;
+            computeMaxTheta(points, cosTheta, meanNormal);
 
-            if((points.size() > 2 * N_MIN && theta > HALF_PI) 
-                || USE_QUADRIC_ONLY){
+            // If cosTheta < 0, then theta > PI/2 (at least if we 
+            // restrict theta to [0, PI])
+            if(cosTheta <= 0){
 
                 // General quadric case
                 GeneralQuadric* quadric = new GeneralQuadric();
@@ -208,9 +226,12 @@ private:
                     return false;
                 }
             }
-            else if(points.size() > 2 * N_MIN){
-                // Bivariate
-                return false;
+            else if(true){
+                BivariateQuadratic* quadratic = 
+                    new BivariateQuadratic(centroid, meanNormal);
+                quadratic->fit(points, centroid, radius);
+                this->localFitFunction = quadratic;
+                return true;
             }
             else{
                 // Edges and corners
@@ -227,7 +248,8 @@ private:
                 return localFitFunction->evaluate(p);
             }
             else{
-                throw std::runtime_error("Local function undefined on node\n");
+                std::cerr << "Local function undefined on node\n";
+                return 0.0;
             }
         }
 
@@ -238,7 +260,9 @@ private:
             // In general only leafs should have local functions fitted,
             // so we need to ensure we only call this on leafs.
             if(localFitFunction){
-                return localFitFunction->approximationError(points);
+                // We scale the error by teh diagonal
+                return localFitFunction->approximationError(points) 
+                    * getDiagonal();
             }
             else{
                 throw std::runtime_error("Local function undefined on node\n");
@@ -247,10 +271,10 @@ private:
 
 
         // Evaluates the b-spline of the local function at the
-        // given point
-        real evaluateQuadraticBSpline(const Vector3& p) const {
+        // given point.
+        real evaluateWeightFunction(const Vector3& p) const {
             // Just calls the B-spline evaluate function
-            return QuadraticBSpline::evaluate(centroid, radius, p);
+            return WeightFunction::evaluate(centroid, radius, p);
         }
 
     };
@@ -280,6 +304,8 @@ private:
         std::vector<Point> points;
         tree.rangeQuery(ptr->getCentroid(), ptr->getRadius(), points);
 
+        std::cout << "a\n";
+
         // In the empty ball case, no further subdivision is done.
         // We increase the radius as usual, but we don't subdivide it
         // later.
@@ -287,6 +313,9 @@ private:
         if(points.size() == 0){
             emptyFlag = true;
         }
+
+        std::cout << "b\n";
+
         
         // If we have some points in the sphere, we ensure we have
         // enough points, by incrementing the radius.
@@ -295,47 +324,78 @@ private:
             ptr->incrementRadius();
             tree.rangeQuery(ptr->getCentroid(), ptr->getRadius(), points);
         }
+
+        std::cout << "c\n";
+
         
         // Once we have enough points, we fit a local function.
-        // If it doesn't work for any reason (plenty of valid reasons)
-        // we just subdivide automatically.
+        // If the function returns false, it means it tried to fit
+        // a local function but for some reason the result is not
+        // perfectly usable.
+        // We thus prioritize subdividing (regardless of error
+        // approximation), unless the MAX_DEPTH has been reached
+        // or the sphere was originally empty, in which case we
+        // don't subdivide.
         if(!ptr->fitLocalFunction(points)){
-            // if the cell was initially empty, we don't subdivide as
-            // discussed, so we leave the function empty.
-            // This is to ensure we don't recurse forever.
-            if(emptyFlag){
-                // TODO:
+
+            std::cout << "d\n";
+
+
+            // We immediatly subdivide if we can subdivide
+            if(!emptyFlag && ptr->subdivide()){
+                points.clear();
+                for(int i = 0; i < 8; i++){
+                    // Then repeat on the children
+                    subdivideSpaceAux(ptr->getChild(i), tree);
+                }
                 return;
             }
 
-            // Otherwise we subdivide
-            ptr->subdivide();
-            for(int i = 0; i < 8; i++){
-                subdivideSpaceAux(ptr->getChild(i), tree);
-            }
+            std::cout << "e\n";
+ 
+            // Otherwise, if we can't subdivide because we reached
+            // the max depth for example, the function remains empty.
+            // This will cause a runtime error if we try to evaluate the
+            // leaf node.
 
             return;
         }
+
+        std::cout << "f\n";
+
+
 
         // If this flag is true, no subdivision is needed, so no need
         // for an error approximation.
         if(emptyFlag){
             return;
         }
+
+        std::cout << "g\n";
+
         
         // If this error metric is too large, we have to disregard
         // the local fit function and subdivide.
         real error = ptr->evaluateErrorApproximation(points);
         if(error > EPSILON_ZERO){
-            // We delete the local function first since it is no
-            // longer useful.
-            ptr->deallocateLocalFunction();
-            ptr->subdivide();
-            for(int i = 0; i < 8; i++){
-                subdivideSpaceAux(ptr->getChild(i), tree);
+
+            std::cout << "h\n";
+
+            // If the error is too large, we delete the function and
+            // subdivide, unless we can't (if MAX_DEPTH is reached)
+            // then we just keep the function as is.
+            if(ptr->subdivide()){
+                points.clear();
+                ptr->deallocateLocalFunction();
+                // Then repeat on the children
+                for(int i = 0; i < 8; i++){
+                    subdivideSpaceAux(ptr->getChild(i), tree);
+                }
             }
             return;
         }
+
+        std::cout << "i\n";
 
         // Otherwise we keep the function and the node remains a leaf
     }
@@ -354,7 +414,7 @@ private:
             // If it is a leaf, we evaluate it
             if(ptr->isLeaf()){
 
-                real spline = ptr->evaluateQuadraticBSpline(p);
+                real spline = ptr->evaluateWeightFunction(p);
                 sum += ptr->evaluateLocalFitFunction(p) * spline;
                 normalizationFactor += spline;
             }
@@ -389,7 +449,8 @@ public:
 
     real evaluate(const Vector3& p){
         // In case the point is outside the root cube
-        if(std::abs(p.x()) > INV_SQRT3 * 0.5 || std::abs(p.y()) > INV_SQRT3 * 0.5
+        if(std::abs(p.x()) > INV_SQRT3 * 0.5 
+            || std::abs(p.y()) > INV_SQRT3 * 0.5
             || std::abs(p.z()) > INV_SQRT3 * 0.5){
             return 0.0;
         }
@@ -405,7 +466,12 @@ public:
         // We also keep track of the sum of weight functions (those
         // that are non-zero) so we can normalize the result.
         evaluateAux(p, root, sum, normalizationFactor);
-        sum /= normalizationFactor;
+        if(normalizationFactor > 0.0){
+            sum /= normalizationFactor;
+        }
+        else{
+            sum = 0.0;
+        }
         return sum;
     }
 

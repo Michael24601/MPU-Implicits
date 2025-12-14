@@ -3,12 +3,11 @@
 #define PRECISION_H
 
 #include <cmath>
+#include <iostream>
 
 // Precision
 typedef double real;
 inline real (*sqrtReal)(real) = ::sqrt;
-
-#define USE_QUADRIC_ONLY true
 
 // Constants
 constexpr real PI = 3.141592653589793;
@@ -28,7 +27,7 @@ constexpr real ALPHA = 0.75;
 constexpr real LAMBDA = 0.1;
 
 // The maximum depth the octree can go
-constexpr int MAX_DEPTH = 20;
+constexpr int MAX_DEPTH = 10;
 
 // The maximum accepted approximation error
 // (Must be careful with this one, too small a value and the octree
@@ -36,11 +35,12 @@ constexpr int MAX_DEPTH = 20;
 constexpr real EPSILON_ZERO = 0.01;
 
 // The conjugate gradient parameters
-constexpr real MAX_CG_ERROR = 1e-08;
+constexpr real MAX_CG_ERROR = 1e-8;
 constexpr real MAX_CG_ITERATIONS = 100;
 
 // Stored here for faster lookup (1/2^n)
-constexpr real halfPower[MAX_DEPTH + 2] = {
+// Ensure it is at least MAX_DEPTH+2 in length
+constexpr real halfPower[22] = {
     1.0,
     0.5,
     0.25,
@@ -64,5 +64,6 @@ constexpr real halfPower[MAX_DEPTH + 2] = {
     0.00000095367431640625,
     0.000000476837158203125
 };
+
 
 #endif

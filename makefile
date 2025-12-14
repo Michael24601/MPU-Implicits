@@ -1,9 +1,9 @@
 
 all:
-	g++ *.cpp -o ./build/build
+	g++ -O3 -DNDEBUG *.cpp -o ./build/build.exe
 
 run: all
-	./build
+	./build/build
 
 clean:
 	rm -rf build

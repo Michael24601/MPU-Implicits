@@ -6,6 +6,7 @@
 #include "../../kdTree3.hpp"
 #include "../../marchingCubes.hpp"
 
+
 std::vector<Point> generatePointsOnSphere(int n, int m){
     std::vector<Point> points(n*m);
     for(int i = 0; i < n; i++){
@@ -85,12 +86,12 @@ void evaluationTest(){
         return octree.evaluate((p - Vector3(0.5 * INV_SQRT3))) * -1.0;
     };
 
-    marchingCubes(lambdaFunction, Vector3(INV_SQRT3), 
+    MarchingCubes::run(lambdaFunction, Vector3(INV_SQRT3), 
         0, 50, 50, 50, false, "output/sphere_evaluation_test.obj");
 
     // We can run it on the actual signed distance function for
     // comparison
-    marchingCubes(sphereSignedDistanceReference, Vector3(INV_SQRT3), 
+    MarchingCubes::run(sphereSignedDistanceReference, Vector3(INV_SQRT3), 
         0, 50, 50, 50, false, "output/sphere_evaluation_reference.obj");
 
 }

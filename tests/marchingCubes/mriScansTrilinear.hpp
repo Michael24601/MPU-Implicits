@@ -75,7 +75,7 @@ void mriScanTrilinearTest(){
     // The issue with nearest neighbor interpolation is that
     // we are limited by the image dimensions and number of slices;
     // using more cubes than that won't get us a smoother result.
-    marchingCubes(f, Vector3(256.0, 256.0, 109.0), 1500, 200, 200, 
+    MarchingCubes::run(f, Vector3(256.0, 256.0, 109.0), 1500, 200, 200, 
         100, false, "output/mri_trilinear_test.obj");
 }
 

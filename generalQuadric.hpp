@@ -4,6 +4,7 @@
 
 #include "localFitFunction.hpp"
 #include "matrix.hpp"
+#include "vectorHelper.hpp"
 #include "monomialBasis.hpp"
 #include "conjugateGradient.hpp"
 #include "kdTree3.hpp"
@@ -73,7 +74,7 @@ private:
             // Outerproduct
             Matrix outerProduct(basis);
             sumQ = sumQ + outerProduct;
-            vec = Matrix::add(vec, Matrix::scale(basis, diag[i])); 
+            vec = vec + (basis * diag[i]); 
         }
         sumQ = sumQ * (1.0 / aux.size());
 
@@ -98,6 +99,7 @@ private:
         for(int i = 0; i < aux.size(); i++){
 
             std::vector<Point> closest;
+            // Searches for nearest neighbors, within the sphere only.
             tree.kNNSearch(aux[i], k, radius, center, closest);
             real prod;
             bool flagSame = true;
@@ -141,9 +143,8 @@ public:
         const KdTree3& tree
     ){
 
-        if(points.empty() || aux.empty()){
-            throw std::invalid_argument("Can't fit quadric on empty points\n");
-        }
+        assert((!points.empty() && !aux.empty()) 
+            && "Can't fit quadric on empty points\n");
 
         // First we check which auxiliary points are actually usable
         std::vector<Vector3> usableAux;

@@ -63,9 +63,9 @@ void solverTest(){
     std::vector<real> cgOutput = ConjugateGradient::solve(A, b);
     
     // We can print Ax - b (normalized by b), which should be small
-    real norm = sqrtReal(Matrix::dot(b, b));
-    std::vector<real> error = Matrix::subtract(A*cgOutput, b);
-    real residualNorm = sqrtReal(Matrix::dot(error, error));
+    real norm = sqrtReal(b * b);
+    std::vector<real> error = (A * cgOutput) - b;
+    real residualNorm = sqrtReal(error * error);
     residualNorm /= norm;
     std::cout << residualNorm << "\n";
 }

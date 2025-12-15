@@ -8,11 +8,11 @@
 #include "tests/kdTree/timeComplexity.hpp"
 #include "tests/conjugateGradient/solver.hpp"
 #include "tests/evaluation/evaluation.hpp"
-#include "tests/evaluation/bunny.hpp"
+#include "tests/evaluation/object.hpp"
 
 int main(){
 
-    bunnyTest();
+    objectTest();
 
     return 0;
 }

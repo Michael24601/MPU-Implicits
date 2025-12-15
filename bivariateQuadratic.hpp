@@ -4,6 +4,7 @@
 
 #include "localFitFunction.hpp"
 #include "matrix.hpp"
+#include "vectorHelper.hpp"
 #include "monomialBasis.hpp"
 #include "conjugateGradient.hpp"
 #include "weightFunction.hpp"
@@ -113,7 +114,7 @@ private:
             real bSplineValue = WeightFunction::evaluate(center, 
                 radius, points[i].getPoint());
             sumP = sumP + (outerProduct * bSplineValue);
-            vec = Matrix::add(vec, Matrix::scale(basis, bSplineValue * uvw.z()));
+            vec = vec + (basis * (bSplineValue * uvw.z()));
         }
 
         // Finally we set the results

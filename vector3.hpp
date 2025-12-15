@@ -139,12 +139,8 @@ public:
 
     // Access using brackets
     const real& operator[](int index) const {
-        if(index < 0 || index > 2){
-            throw std::invalid_argument("Index out of bounds");
-        }
-        else{
-            return data[index];
-        }
+        assert((index >= 0 && index <= 2) && "Index out of bounds");
+        return data[index];
     }
 
 

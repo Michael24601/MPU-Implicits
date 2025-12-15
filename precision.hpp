@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <cassert>
 
 // Precision
 typedef double real;

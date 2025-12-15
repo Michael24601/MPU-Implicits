@@ -1,6 +1,6 @@
 
-#ifndef BUNNY_TEST_H
-#define BUNNY_TEST_H
+#ifndef OBJECT_TEST_H
+#define OBJECT_TEST_H
 
 #include "../../octree.hpp"
 #include "../../marchingCubes.hpp"
@@ -117,7 +117,7 @@ std::vector<Point> sampleObjTriangles(const std::string& filename, int k) {
 }
 
 
-void bunnyTest(){
+void objectTest(){
 
     // We first generate the points
     std::vector<Point> points = sampleObjTriangles("input/bunny.obj", 1);

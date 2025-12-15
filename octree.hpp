@@ -116,9 +116,10 @@ private:
 
 
         Node* getChild(int index){
-            if(index < 0 || index >= 8){
-                throw std::invalid_argument("Child index does not exist\n");
-            }
+
+            assert((index >= 0 && index < 8)
+                && "Child index does not exist\n");
+                
             return child[index];
         }
 
@@ -246,6 +247,9 @@ private:
         real evaluateLocalFitFunction(const Vector3& p) const{
             // In general only leafs should have local functions fitted,
             // so we need to ensure we only call this on leafs.
+            // However, it is possible that no function was able to be
+            // fitted; this doesn't throw an error, but it does alert
+            // the user.
             if(localFitFunction){
                 return localFitFunction->evaluate(p);
             }
@@ -261,13 +265,11 @@ private:
 
             // In general only leafs should have local functions fitted,
             // so we need to ensure we only call this on leafs.
-            if(localFitFunction){
-                // We scale the error by teh diagonal
-                return localFitFunction->approximationError(points);
-            }
-            else{
-                throw std::runtime_error("Local function undefined on node\n");
-            }
+            assert(localFitFunction != nullptr 
+                && "Local function not defined");
+
+            // We scale the error by teh diagonal
+            return localFitFunction->approximationError(points);
         }
 
 

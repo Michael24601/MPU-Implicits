@@ -9,10 +9,12 @@
 #include "tests/conjugateGradient/solver.hpp"
 #include "tests/evaluation/evaluation.hpp"
 #include "tests/evaluation/object.hpp"
+#include "tests/rayMarching/sphere.hpp"
+#include "tests/rayMarching/object.hpp"
 
 int main(){
 
-    objectTest();
+    rayObjectTest();
 
     return 0;
 }

@@ -3,7 +3,6 @@
 #define MATRIX_H
 
 #include "precision.hpp"
-#include <stdexcept>
 #include <vector>
 
 

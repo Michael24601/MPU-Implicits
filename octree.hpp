@@ -34,7 +34,7 @@ private:
         LocalFitFunction* localFitFunction;
         
         // The 8 children
-        Node* child[8] = {nullptr};
+        Node* child[8];
         bool leaf;
 
         
@@ -249,7 +249,7 @@ private:
             // so we need to ensure we only call this on leafs.
             // However, it is possible that no function was able to be
             // fitted; this doesn't throw an error, but it does alert
-            // the user.
+            // the user, and returns 0.0.
             if(localFitFunction){
                 return localFitFunction->evaluate(p);
             }
@@ -296,6 +296,7 @@ private:
         // ALPHA * diagonal (which is fixed given the depth), 
         // and the centroid is given in the constructor, and is
         // also fixed based on the paren't centroid and diagonal.
+
         // We can assume ptr has been initialized, if not,
         // we return.
         if(!ptr) return;
@@ -345,8 +346,8 @@ private:
  
             // Otherwise, if we can't subdivide because we reached
             // the max depth for example, the function remains empty.
-            // This will cause a runtime error if we try to evaluate the
-            // leaf node.
+            // The user will be alerted if an attempt is made to
+            // evaluate it.
 
             return;
         }
@@ -408,6 +409,20 @@ private:
     }
 
 
+    int getDepthAux(const Vector3& p, NodePtr ptr){
+        if(!ptr || ptr->isLeaf()) {
+            return 0;
+        }
+
+        // If the node is not a leaf, we need to know
+        // which child p is in based on x, y, and z.
+        int i = (p.x() > ptr->getCentroid().x() ? 1 : 0);
+        int j = (p.y() > ptr->getCentroid().y() ? 1 : 0);
+        int k = (p.z() > ptr->getCentroid().z() ? 1 : 0);
+        return getDepthAux(p, ptr->getChild(inverseOffset[i][j][k])) + 1;
+    }
+
+
 public:
 
     Octree() {
@@ -452,6 +467,12 @@ public:
             sum = 0.0;
         }
         return sum;
+    }
+
+
+    // Returns the depth of subdivision of the given point
+    int getDepth(const Vector3& p){
+        return getDepthAux(p, root);
     }
 
 };

@@ -143,8 +143,23 @@ public:
         return data[index];
     }
 
+    
+    real& operator[](int index) {
+        assert((index >= 0 && index <= 2) && "Index out of bounds");
+        return data[index];
+    }
 
 
+    // Checks if a function is in a certain cuboid bounding box
+    bool inBounds(const std::pair<Vector3, Vector3>& bounds) const {
+        for (int i = 0; i < 3; ++i) {
+            if ((*this)[i] < bounds.first[i] || (*this)[i] > bounds.second[i]){
+                return false;
+            }
+        }
+        return true;
+    }
+    
 };
 
 #endif

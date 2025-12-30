@@ -15,7 +15,7 @@ void sphereTest(){
 
     real (*f)(const Vector3&) = sphereSignedDistance;
     // Uses 20 cubes per direction
-    MarchingCubes::run(f, Vector3(1.0), 0, 30, 30, 30, false,
+    MarchingCubes::run(f, Vector3(1.0), 0, 30, 30, 30,
         "output/sphere_test.obj");
 }
 

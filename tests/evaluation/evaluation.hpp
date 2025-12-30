@@ -87,12 +87,12 @@ void evaluationTest(){
     };
 
     MarchingCubes::run(lambdaFunction, Vector3(INV_SQRT3), 
-        0, 50, 50, 50, false, "output/sphere_evaluation_test.obj");
+        0, 50, 50, 50, "output/sphere_evaluation_test.obj");
 
     // We can run it on the actual signed distance function for
     // comparison
     MarchingCubes::run(sphereSignedDistanceReference, Vector3(INV_SQRT3), 
-        0, 50, 50, 50, false, "output/sphere_evaluation_reference.obj");
+        0, 50, 50, 50, "output/sphere_evaluation_reference.obj");
 
 }
 

@@ -14,7 +14,7 @@
 
 int main(){
 
-    rayObjectTest();
+    objectTest();
 
     return 0;
 }

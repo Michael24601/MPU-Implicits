@@ -29,17 +29,24 @@ void rayObjectTest(){
 
     auto lambdaColor = [&octree](const Vector3& p) -> Vector3 {
         int depth = octree.getDepth(p);
-        // Blue is shallow
-        real blue = 255.0 * (MAX_DEPTH - depth) / MAX_DEPTH;
-        // Red is deep
-        real red = 255.0 * depth / MAX_DEPTH;
+        // Depth in [0, 1]
+        real t = real(depth) / real(MAX_DEPTH);
+
+        // This just makes the scaling non-linear, since most
+        // points on the surface are in deeper levels.
+        real power = 2; 
+        real tn = std::pow(t, power);
+
+        // Red is deep, blue is shallow
+        real red  = 255.0 * tn;
+        real blue = 255.0 * (1.0 - tn);
         return Vector3(red, 0, blue);
     };
 
     Vector3 (*colorF)(const Vector3&) = objectColor;
 
     RayMarching::run(
-        lambdaFunction, lambdaColor, Vector3(0.25, 0, 0),
+        lambdaFunction, colorF, Vector3(0.25, 0, 0),
         Vector3(0, 0.25, 0), Vector3(0, 0, 1.0), -1.0,
         Vector3(0.5), SQRT3, 1024, 1024, Vector3(0.0), 
         "output/ray_bunny_test.png"

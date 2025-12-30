@@ -11,6 +11,7 @@
 #include "localFitFunction.hpp"
 #include "generalQuadric.hpp"
 #include "bivariateQuadratic.hpp"
+#include "piecewisePolynomial.hpp"
 #include "kdTree3.hpp"
 #include "cubeOffset.hpp"
 #include "weightFunction.hpp"
@@ -32,6 +33,11 @@ private:
         // on a leaf node. If a node is subdivided we should delete
         // the local fit function.
         LocalFitFunction* localFitFunction;
+        
+        // This is the support of teh entire subtree originating
+        // at this node. It is a cuboid, so it will in practice
+        // be larger than teh actual support (union of sphere)
+        std::pair<Vector3, Vector3> subtreeSupport;
         
         // The 8 children
         Node* child[8];
@@ -147,6 +153,53 @@ private:
         }
 
 
+        bool isFitted() const{
+            return localFitFunction != nullptr;
+        }
+
+
+        // Returns a constant pointer (can't change what it
+        // points to, can't change the object it points to)
+        const LocalFitFunction* const getLocalFunction() const{
+            return localFitFunction;
+        }
+
+
+        const std::pair<Vector3, Vector3>& getSubtreeSupport() const {
+            return subtreeSupport;
+        }
+
+
+        //  Sets the support that the entire subtree has originating at'
+        // this current node. This support is a cuboid.
+        // This is not the extact support, since the support will
+        // be a union of spheres, but it cotnains the support and
+        // prunes most points outside of it.
+        // Note that it also sets the descendants' support.
+        void computeSubtreeSupport() {
+
+            std::pair<Vector3, Vector3> bounds(
+                centroid - Vector3(radius),
+                centroid + Vector3(radius)
+            );
+            
+            if(!leaf){
+                for(int i = 0; i < 8; i++){
+                    child[i]->computeSubtreeSupport();
+                    std::pair<Vector3, Vector3>& b = child[i]->subtreeSupport;
+                    // We then possibly expand the bounds based on the
+                    // children.
+                    for(int c = 0; c < 3; c++){
+                        bounds.first[c] = std::min(b.first[c], bounds.first[c]);
+                        bounds.second[c] = std::max(b.second[c], bounds.second[c]);
+                    }
+                }
+            }
+
+            this->subtreeSupport = bounds;
+        }
+
+
         // Subdivides at this node by initializing 8 children
         bool subdivide(){
             // If the current node can't be subdivided for any reason,
@@ -211,8 +264,9 @@ private:
             computeMaxTheta(points, cosTheta, meanNormal);
 
             // If cosTheta < 0, then theta > PI/2 (at least if we 
-            // restrict theta to [0, PI])
-            if(cosTheta <= 0){
+            // restrict theta to [0, PI]).
+            if(cosTheta <= 0 && 
+                (points.size() >= 2 * N_MIN || !USE_PIECEWISE_POLYNOMIALS)){
 
                 // General quadric case
                 GeneralQuadric* quadric = new GeneralQuadric();
@@ -229,7 +283,7 @@ private:
                     return false;
                 }
             }
-            else if(true){
+            else if(points.size() >= 2 * N_MIN || !USE_PIECEWISE_POLYNOMIALS){
                 BivariateQuadratic* quadratic = 
                     new BivariateQuadratic(centroid, meanNormal);
                 quadratic->fit(points, centroid, radius);
@@ -238,9 +292,19 @@ private:
             }
             else{
                 // Edges and corners
-                return false;
+                // The auxiliary points are the corners and the centroid
+                std::vector<Vector3> auxiliary = generateAuxiliaryPoints();
+                PiecewisePolynomial* p = new PiecewisePolynomial();
+                if(p->fit(points, centroid, radius, meanNormal, 
+                    auxiliary, tree)){
+                    this->localFitFunction = p;
+                    return true;
+                }
+                else{
+                    delete p;
+                    return false;
+                }
             }
-
         }
 
         // Evaluates the local function at the given point
@@ -366,9 +430,12 @@ private:
             // If the error is too large, we delete the function and
             // subdivide, unless we can't (if MAX_DEPTH is reached)
             // then we just keep the function as is.
+
+            // Note, we don't deallocate the parent function, since
+            // we may need it as a fallback in case the children could not
+            // be fitted.
             if(ptr->subdivide()){
                 points.clear();
-                ptr->deallocateLocalFunction();
                 // Then repeat on the children
                 for(int i = 0; i < 8; i++){
                     subdivideSpaceAux(ptr->getChild(i), tree);
@@ -381,29 +448,66 @@ private:
     }
 
 
-    void evaluateAux(const Vector3& p, NodePtr ptr, real& sum, 
+    void evaluateAux(const Vector3& p, NodePtr ptr, 
+        const LocalFitFunction* const parentFunction, real& sum, 
         real& normalizationFactor){
         
         if(!ptr){
             return;
         }
         
-        if((p - ptr->getCentroid()).lengthSquared() <= 
-            ptr->getRadius() * ptr->getRadius()){
-
-            // If it is a leaf, we evaluate it
-            if(ptr->isLeaf()){
+        // If the node is a leaf and the node is in its sphere
+        // support, then we can evalute it.
+        if(ptr->isLeaf()){
+            // If it is within the bounds, we evaluate it, otherwise
+            // we return early.
+            if((p - ptr->getCentroid()).lengthSquared() <= 
+                ptr->getRadius() * ptr->getRadius()){
 
                 real spline = ptr->evaluateWeightFunction(p);
-                sum += ptr->evaluateLocalFitFunction(p) * spline;
+
+                // If we can't evaluate the current local function,
+                // because it was not fitted, we evaluate the parent,
+                // or closest ancestor that exists.
+                real eval;
+                if(ptr->isFitted()){
+                    eval = ptr->evaluateLocalFitFunction(p);
+                }
+                else{
+                    if(parentFunction){
+                        eval = parentFunction->evaluate(p);
+                    }
+                    else{
+                        eval = 0.0;
+                        std::cerr << "Could not evaluate the cell or "
+                            << "any of its ancestors\n";
+                    }
+                }
+
+                sum += eval * spline;
                 normalizationFactor += spline;
             }
-            // Otherwise we check its children
-            else{
-                // Then we visit the children
-                for(int i = 0; i < 8; i++){
-                    evaluateAux(p, ptr->getChild(i), sum, normalizationFactor);
-                }
+            return;
+        }
+        // If it is not a leaf, then we need to check its descendants,
+        // but only if the descendant support contains the point.
+        // Note that this function that checks for descendant support
+        // overstimates the support, it may return true even though
+        // the point is not in any of the descendants, since it is 
+        // a cuboid, and the support is a union of spheres.
+        // We can't just prune the subtree if the parent sphere doesn't
+        // contain the point as the child spheres aren't necessarily contained
+        // in the parent spheres.
+
+        // We always keep track of the closest ancestor local function
+        // (which may need to be evaluated in case the leaf doesn't
+        // have a local function).
+        else if(p.inBounds(ptr->getSubtreeSupport())){
+            const LocalFitFunction* const f = (ptr->isFitted() ? 
+                ptr->getLocalFunction(): parentFunction);
+                
+            for(int i = 0; i < 8; i++){
+                evaluateAux(p, ptr->getChild(i), f, sum, normalizationFactor);
             }
         }
     }
@@ -438,6 +542,10 @@ public:
         // We can't do this iteratively since we may need
         // to subdivide the nodes.
         subdivideSpaceAux(root, tree);
+
+        // Because the subtree supports never change, it is best
+        // to precompute them here than each time we evaluate.
+        root->computeSubtreeSupport();
     }
 
 
@@ -459,7 +567,7 @@ public:
         // with it, and add it to the sum.
         // We also keep track of the sum of weight functions (those
         // that are non-zero) so we can normalize the result.
-        evaluateAux(p, root, sum, normalizationFactor);
+        evaluateAux(p, root, nullptr, sum, normalizationFactor);
         if(normalizationFactor > 0.0){
             sum /= normalizationFactor;
         }

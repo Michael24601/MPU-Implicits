@@ -97,24 +97,15 @@ public:
     // object that satisfies some basic assumptions, a surface value b
     // such that f(x, y, z) = b defines our surface, the range
     // of points, the number of desired cubes in each direction
-    // (here nx, ny, and nz is the number of cubes + 1), and whether to
-    // use the middle point or interpolate to get the triangle vertices
-    // along the edges.
+    // (here nx, ny, and nz is the number of cubes + 1).
     // Note, we expect the shape to be somewhere between (0, 0, 0) and range.
     static void run(
         const std::function<real(const Vector3&)>& function,
         const Vector3& range, 
         real surfaceValue, 
         int nx, int ny, int nz,
-        bool useMiddlePoints,
         std::string filename
     ) {
-
-
-        // This boolean indicates whether or not triangle vertices are
-        // calculated by linearly interpolating the surface and intersecting
-        // the cube edges, or just taking the edge middle point. 
-        const bool USE_MIDDLE_POINT = useMiddlePoints; 
 
         // If we already know how many cubes we want to use,
         // as well as our support, then we can precompute some values
@@ -284,6 +275,11 @@ public:
                         // This is the interpolation variable along the edge
                         real alpha;
 
+                        // This boolean indicates whether the triangle 
+                        // vertices are calculated by linearly interpolating 
+                        // the density at each corner of the cube to get
+                        // the surface point along the cube edge.
+                        // If not we use the middle points.
                         if(USE_MIDDLE_POINT){
                             // In this case we always pick the middle point
                             // of the edge as the triangle vertex point/

@@ -128,7 +128,7 @@ public:
 
     BivariateQuadratic(const Vector3& origin, const Vector3& normal): 
         coefficients{0,0,0,0,0,0}{
-
+        
         setBasis(origin, normal);
     }
 
@@ -138,6 +138,11 @@ public:
         const std::vector<Point>& points,
         const Vector3& center, real radius
     ){
+
+        // We should have at least 6 points
+        assert(points.size() >= 6 
+            && "Too few points for quadratic fitting\n");
+
         Matrix m(6);
         std::vector<real> b(6);
         getLinearSystem(points, center, radius, m, b);

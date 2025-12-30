@@ -34,11 +34,20 @@ constexpr int MAX_DEPTH = 8;
 // The maximum accepted approximation error
 // (Must be careful with this one, too small a value and the octree
 // never stops subsdividing and the max depth is always reached)
-constexpr real EPSILON_ZERO = 0.01;
+constexpr real EPSILON_ZERO = 0.001;
 
 // The conjugate gradient parameters
 constexpr real MAX_CG_ERROR = 1e-8;
 constexpr real MAX_CG_ITERATIONS = 100;
+
+// Controls whether we use piecewise polynomials (sharp features)
+constexpr bool USE_PIECEWISE_POLYNOMIALS = true;
+
+// This is a parameter for marching cubes, indicating whether we
+// use linear interpolation of the density at the two ends
+// of an edge to get the point where the surface intersection takes
+// place, or whether we just use the mid point.
+constexpr real USE_MIDDLE_POINT = false;
 
 // Controls ray marcher step size (will be scaled by the scene)
 // This needs to be small to avoid staircase artifcats, where

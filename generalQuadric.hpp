@@ -146,6 +146,10 @@ public:
         assert((!points.empty() && !aux.empty()) 
             && "Can't fit quadric on empty points\n");
 
+        // We should have at least 10 points
+        assert(points.size() >= 10 
+            && "Too few points for quadric fitting\n");
+
         // First we check which auxiliary points are actually usable
         std::vector<Vector3> usableAux;
         std::vector<real> diags;

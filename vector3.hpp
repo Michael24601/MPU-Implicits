@@ -61,6 +61,18 @@ public:
     }
 
 
+    Vector3 max(real r) const {
+        return Vector3(std::max(r, data[0]), std::max(r, data[1]), 
+            std::max(r, data[2]));
+    }
+
+
+    Vector3 min(real r) const {
+        return Vector3(std::min(r, data[0]), std::min(r, data[1]), 
+            std::min(r, data[2]));
+    }
+
+
     real lengthSquared() const {
         return data[0] * data[0] 
             + data[1] * data[1] 
@@ -70,6 +82,12 @@ public:
 
     real length() const {
         return sqrtReal(lengthSquared());
+    }
+
+
+    Vector3 abs() const {
+        return Vector3(std::abs(data[0]), std::abs(data[1]), 
+            std::abs(data[2]));
     }
 
     

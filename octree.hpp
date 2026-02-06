@@ -17,6 +17,7 @@
 #include "weightFunction.hpp"
 
 class Octree{
+
 private:
 
     // Note that the nodes store the localFitFunction, but not the
@@ -34,9 +35,9 @@ private:
         // the local fit function.
         LocalFitFunction* localFitFunction;
         
-        // This is the support of teh entire subtree originating
+        // This is the support of the entire subtree originating
         // at this node. It is a cuboid, so it will in practice
-        // be larger than teh actual support (union of sphere)
+        // be larger than the actual support (union of spheres)
         std::pair<Vector3, Vector3> subtreeSupport;
         
         // The 8 children
@@ -170,12 +171,13 @@ private:
         }
 
 
-        //  Sets the support that the entire subtree has originating at'
+        // Sets the support that the entire subtree has originating at'
         // this current node. This support is a cuboid.
         // This is not the extact support, since the support will
         // be a union of spheres, but it cotnains the support and
         // prunes most points outside of it.
-        // Note that it also sets the descendants' support.
+        // Note that it also sets the descendants' support as it works
+        // from the bottom up.
         void computeSubtreeSupport() {
 
             std::pair<Vector3, Vector3> bounds(
@@ -204,7 +206,7 @@ private:
         bool subdivide(){
             // If the current node can't be subdivided for any reason,
             // we return false
-            if(depth == MAX_DEPTH || !leaf){
+            if(depth == Octree::MAX_DEPTH || !leaf){
                 return false;
             }
 
@@ -492,7 +494,7 @@ private:
         // If it is not a leaf, then we need to check its descendants,
         // but only if the descendant support contains the point.
         // Note that this function that checks for descendant support
-        // overstimates the support, it may return true even though
+        // overestimates the support, it may return true even though
         // the point is not in any of the descendants, since it is 
         // a cuboid, and the support is a union of spheres.
         // We can't just prune the subtree if the parent sphere doesn't
@@ -528,6 +530,27 @@ private:
 
 
 public:
+
+    // The minimum number of points in a leaf node
+    static unsigned int N_MIN;
+
+    // The factor used in the radius computation
+    static real ALPHA;
+
+    // The step size when incrementing the radius
+    static real LAMBDA;
+
+    // The maximum depth the octree can go
+    static unsigned int MAX_DEPTH;
+
+    // The maximum accepted approximation error
+    // (Must be careful with this one, too small a value and the octree
+    // never stops subsdividing and the max depth is always reached)
+    static real EPSILON_ZERO;
+
+    // Controls whether we use piecewise polynomials (sharp features)
+    static bool USE_PIECEWISE_POLYNOMIALS;
+    
 
     Octree() {
         // Root
@@ -578,7 +601,8 @@ public:
     }
 
 
-    // Returns the depth of subdivision of the given point
+    // Returns the depth of subdivision of the given point.
+    // This can be used to color the area, or to visualize the octree.
     int getDepth(const Vector3& p){
         return getDepthAux(p, root);
     }

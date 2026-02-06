@@ -70,6 +70,16 @@ private:
     }
 
 
+    static Vector3 clusterMeanCentroid(const std::vector<Point>& cluster){
+        Vector3 mean(0, 0, 0);
+        for(int i = 0; i < cluster.size(); i++){
+            mean = mean + cluster[i].getPoint();
+        }
+        mean = mean * (1.0 / cluster.size());
+        return mean;
+    }
+
+
     // Fits a bivariate quadratic on a cluster and pushes it into
     // the functions array.
     void addQuadratic(const std::vector<Point>& cluster, 
@@ -138,8 +148,8 @@ public:
 
             // Each cluster must have at least 6 points, or we
             // keep the coefficients 0 in the function.
-            addQuadratic(p1, centroid, clusterMeanNormal(p1), radius);
-            addQuadratic(p2, centroid, clusterMeanNormal(p2), radius);
+            addQuadratic(p1, clusterMeanCentroid(p1), clusterMeanNormal(p1), radius);
+            addQuadratic(p2, clusterMeanCentroid(p2), clusterMeanNormal(p2), radius);
 
             return true;
         }
@@ -177,9 +187,9 @@ public:
 
         // If the test doesn't pass, we just have 3 clusters
         if(p3.size() < 2 || min3 >= 0.9){
-            addQuadratic(p1, centroid, clusterMeanNormal(p1), radius);
-            addQuadratic(p2, centroid, clusterMeanNormal(p2), radius);
-            addQuadratic(p3, centroid, clusterMeanNormal(p3), radius);
+            addQuadratic(p1, clusterMeanCentroid(p1), clusterMeanNormal(p1), radius);
+            addQuadratic(p2, clusterMeanCentroid(p2), clusterMeanNormal(p2), radius);
+            addQuadratic(p3, clusterMeanCentroid(p3), clusterMeanNormal(p3), radius);
 
             return true;
         }
@@ -203,10 +213,10 @@ public:
             std::vector<Point> p31, p32;
             clusterPoints(p3, p31, p32, n31, n32);
 
-            addQuadratic(p1, centroid, clusterMeanNormal(p1), radius);
-            addQuadratic(p2, centroid, clusterMeanNormal(p2), radius);
-            addQuadratic(p31, centroid, clusterMeanNormal(p31), radius);
-            addQuadratic(p32, centroid, clusterMeanNormal(p32), radius);
+            addQuadratic(p1, clusterMeanCentroid(p1), clusterMeanNormal(p1), radius);
+            addQuadratic(p2, clusterMeanCentroid(p2), clusterMeanNormal(p2), radius);
+            addQuadratic(p31, clusterMeanCentroid(p31), clusterMeanNormal(p31), radius);
+            addQuadratic(p32, clusterMeanCentroid(p32), clusterMeanNormal(p32), radius);
 
             return true;
         }
@@ -229,9 +239,7 @@ public:
         assert(((functions.size() > 0 && functions.size() <= 4) 
             || quadric) && "The number of functions is not correct\n");
 
-        // We just need to use min() (since we have 
-        // a function that is negative on the inside of the surface
-        // and poisitive outside).
+        // We just need to use max
         if(functions.size() == 1){
             return functions[0].evaluate(input);
         }

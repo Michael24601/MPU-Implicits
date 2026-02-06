@@ -40,7 +40,6 @@ private:
         Vector3 vertexNormal[12];
     };
 
-
     
     // This function just takes the array of cubes containing some triangles
     // and converts them to a .obj file.
@@ -92,6 +91,10 @@ private:
 
 public:
 
+    // Tells marching cubes whether to use linear interpolation
+    // to determine position and normal of vertex along edge, or
+    // just use the average.
+    static bool USE_MIDDLE_POINT;
 
     // Instead of expecting data, it just expects us to send it a function
     // object that satisfies some basic assumptions, a surface value b

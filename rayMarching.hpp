@@ -67,6 +67,14 @@ private:
 
 public:
 
+
+    // Controls ray marcher step size (will be scaled by the scene)
+    // This needs to be small to avoid staircase artifcats, where
+    // large portions of the rendered image look like a solid color.
+    static real RAY_MARCHER_STEP;
+    static real FINITE_DIFFERENCE_STEP;
+
+
     // Takes as input an implicit function f(x, y, z) = 0 that
     // defines some surface, some camera parameters, and then
     // outputs an image rendered from that perspective.

@@ -2,7 +2,7 @@
 #ifndef WEIGHT_FUNCTION_H
 #define WEIGHT_FUNCTION_H
 
-#include "quadraticBSpline.hpp"
+#include "bSpline.hpp"
 #include "inverseDistanceWeight.hpp"
 
 class WeightFunction{

@@ -12,6 +12,11 @@ class ConjugateGradient{
 
 public:
 
+    // The conjugate gradient parameters
+    static real MAX_CG_ERROR;
+    static unsigned int MAX_CG_ITERATIONS;
+
+
     // This assumes that A is an SPD matrix
     static std::vector<real> solve(const Matrix& A, 
         const std::vector<real>& b){
